@@ -24,15 +24,15 @@ jobs:
     permissions:
       contents: read
     env:
-      VPS_HOST: ${{ secrets.MAILER_VPS_HOST }}
-      VPS_USER: ${{ secrets.MAILER_VPS_USER }}
-      VPS_PORT: ${{ secrets.MAILER_VPS_SSH_PORT }}
-      VPS_APP_DIR: ${{ secrets.MAILER_VPS_APP_DIR }}
-      SSH_PRIVATE_KEY: ${{ secrets.MAILER_VPS_SSH_PRIVATE_KEY }}
-      VPS_HOST_KEY: ${{ secrets.MAILER_VPS_HOST_KEY || '' }}
+      VPS_HOST: ${{ secrets.MAILER_VPS_HOST || secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.MAILER_VPS_USER || secrets.VPS_USER }}
+      VPS_PORT: ${{ secrets.MAILER_VPS_SSH_PORT || secrets.VPS_SSH_PORT }}
+      VPS_APP_DIR: ${{ secrets.MAILER_VPS_APP_DIR || secrets.VPS_APP_DIR }}
+      SSH_PRIVATE_KEY: ${{ secrets.MAILER_VPS_SSH_PRIVATE_KEY || secrets.VPS_SSH_PRIVATE_KEY }}
+      VPS_HOST_KEY: ${{ secrets.MAILER_VPS_HOST_KEY || secrets.VPS_HOST_KEY || '' }}
       DEPLOY_BRANCH: main
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-      HEALTHCHECK_URL: ${{ secrets.MAILER_DEPLOY_HEALTHCHECK_URL }}
+      HEALTHCHECK_URL: ${{ secrets.MAILER_DEPLOY_HEALTHCHECK_URL || secrets.DEPLOY_HEALTHCHECK_URL }}
 
     steps:
       - name: Validate required secrets
