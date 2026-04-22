@@ -56,13 +56,13 @@ jobs:
           git status --short || true
 
           # Force-sync to remote branch.
-          git fetch origin "$BRANCH"
-          git reset --hard "origin/$BRANCH"
+          git fetch origin "$DEPLOY_BRANCH"
+          git reset --hard "origin/$DEPLOY_BRANCH"
 
           CURRENT_SHA="$(git rev-parse HEAD)"
           echo "==> Checked out SHA: $CURRENT_SHA"
-          if [ -n "${EXPECTED_SHA:-}" ] && [ "$CURRENT_SHA" != "$EXPECTED_SHA" ]; then
-            echo "::error::Deployed SHA mismatch. Expected $EXPECTED_SHA, got $CURRENT_SHA"
+          if [ -n "${DEPLOY_SHA:-}" ] && [ "$CURRENT_SHA" != "$DEPLOY_SHA" ]; then
+            echo "::error::Deployed SHA mismatch. Expected $DEPLOY_SHA, got $CURRENT_SHA"
             exit 1
           fi
 
