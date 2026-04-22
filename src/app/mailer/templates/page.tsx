@@ -11,7 +11,7 @@ import { PageSpinner } from "@/components/ui/spinner";
 import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { MailerLoginPage } from "../login-page";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import { FileText, Pencil, Plus, Trash2 } from "lucide-react";
 
 interface TemplateItem {
   id: string;
@@ -33,7 +33,8 @@ export default function MailerTemplatesPage() {
   const [items, setItems] = useState<TemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("custom");
   const [subject, setSubject] = useState("");
@@ -72,14 +73,39 @@ export default function MailerTemplatesPage() {
     return fallback;
   }
 
-  async function createTemplate(e: React.FormEvent) {
+  function openCreateModal() {
+    setEditingId(null);
+    setName("");
+    setCategory("custom");
+    setSubject("");
+    setHtml("");
+    setDescription("");
+    setEditorOpen(true);
+  }
+
+  function openEditModal(template: TemplateItem) {
+    setEditingId(template.id);
+    setName(template.name);
+    setCategory(template.category);
+    setSubject(template.subject);
+    setHtml(template.html);
+    setDescription(template.description ?? "");
+    setEditorOpen(true);
+  }
+
+  async function saveTemplate(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError("");
 
     try {
-      const res = await apiFetch("/api/desktop/templates", {
-        method: "POST",
+      const endpoint = editingId
+        ? `/api/desktop/templates/${editingId}`
+        : "/api/desktop/templates";
+      const method = editingId ? "PATCH" : "POST";
+
+      const res = await apiFetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
@@ -92,18 +118,14 @@ export default function MailerTemplatesPage() {
 
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
-        throw new Error(parseError(body, "Failed to create template"));
+        throw new Error(parseError(body, editingId ? "Failed to update template" : "Failed to create template"));
       }
 
-      setCreating(false);
-      setName("");
-      setCategory("custom");
-      setSubject("");
-      setHtml("");
-      setDescription("");
+      setEditorOpen(false);
+      setEditingId(null);
       await loadTemplates();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create template");
+      setError(err instanceof Error ? err.message : editingId ? "Failed to update template" : "Failed to create template");
     } finally {
       setSaving(false);
     }
@@ -132,10 +154,10 @@ export default function MailerTemplatesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Templates</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Reusable campaign templates (built-in and custom)
+            Reusable campaign templates (built-in and custom). Only custom templates can be edited or removed.
           </p>
         </div>
-        <Button size="sm" onClick={() => setCreating(true)}>
+        <Button size="sm" onClick={openCreateModal}>
           <Plus className="h-4 w-4" />
           New Template
         </Button>
@@ -154,7 +176,7 @@ export default function MailerTemplatesPage() {
           icon={<FileText className="h-12 w-12" />}
           title="No templates"
           description="Create your first reusable template."
-          action={{ label: "Create template", onClick: () => setCreating(true) }}
+          action={{ label: "Create template", onClick: openCreateModal }}
         />
       ) : (
         <div className="space-y-3">
@@ -175,26 +197,35 @@ export default function MailerTemplatesPage() {
                   ) : null}
                 </div>
 
-                {!tpl.builtIn && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    loading={deleteId === tpl.id}
-                    onClick={() => deleteTemplate(tpl.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                )}
+                {!tpl.builtIn ? (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openEditModal(tpl)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      loading={deleteId === tpl.id}
+                      onClick={() => deleteTemplate(tpl.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </Card>
           ))}
         </div>
       )}
 
-      <Modal isOpen={creating} onClose={() => setCreating(false)}>
+      <Modal isOpen={editorOpen} onClose={() => setEditorOpen(false)}>
         <ModalContent size="lg">
-          <ModalHeader>Create Template</ModalHeader>
-          <form onSubmit={createTemplate}>
+          <ModalHeader>{editingId ? "Edit Template" : "Create Template"}</ModalHeader>
+          <form onSubmit={saveTemplate}>
             <ModalBody>
               <div className="grid gap-4">
                 <label className="grid gap-1.5 text-sm">
@@ -225,11 +256,11 @@ export default function MailerTemplatesPage() {
               </div>
             </ModalBody>
             <ModalFooter>
-              <Button type="button" variant="ghost" onClick={() => setCreating(false)}>
+              <Button type="button" variant="ghost" onClick={() => setEditorOpen(false)}>
                 Cancel
               </Button>
               <Button type="submit" loading={saving}>
-                Save template
+                {editingId ? "Update template" : "Save template"}
               </Button>
             </ModalFooter>
           </form>
@@ -238,4 +269,3 @@ export default function MailerTemplatesPage() {
     </div>
   );
 }
-
