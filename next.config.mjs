@@ -36,16 +36,38 @@ const nextConfig = {
   // works without Caddy (local-only navigation via /mailer/* when mounted).
   assetPrefix: process.env.NODE_ENV === "production" ? MAILER_ASSET_PREFIX : undefined,
 
+  async redirects() {
+    return [
+      {
+        source: "/mailer",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/mailer/:path*",
+        destination: "/:path*",
+        permanent: true,
+      },
+    ];
+  },
+
   async rewrites() {
     return {
       beforeFiles: [
-        // When freela.ge proxies `/mailer/api/*` through the `/mailer/*`
-        // location, the mailer app sees the full path. Strip the `/mailer`
-        // prefix so the existing API handlers pick the request up.
+        // Keep compatibility with old `/mailer/api/*` calls.
         {
           source: "/mailer/api/:path*",
           destination: "/api/:path*",
         },
+        // Canonical root routes mapped to existing pages in `/mailer/*`.
+        { source: "/admin/:path*", destination: "/mailer/admin/:path*" },
+        { source: "/billing/:path*", destination: "/mailer/billing/:path*" },
+        { source: "/campaigns/:path*", destination: "/mailer/campaigns/:path*" },
+        { source: "/contacts/:path*", destination: "/mailer/contacts/:path*" },
+        { source: "/reports/:path*", destination: "/mailer/reports/:path*" },
+        { source: "/settings/:path*", destination: "/mailer/settings/:path*" },
+        { source: "/smtp-pool/:path*", destination: "/mailer/smtp-pool/:path*" },
+        { source: "/templates/:path*", destination: "/mailer/templates/:path*" },
       ],
       afterFiles: [],
       fallback: [],

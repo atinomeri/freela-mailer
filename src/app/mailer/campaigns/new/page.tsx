@@ -382,7 +382,7 @@ export default function NewCampaignPage() {
         }
       }
 
-      router.push(`/mailer/campaigns/${campaignId}`);
+      router.push(`/campaigns/${campaignId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to finish campaign");
     } finally {
@@ -419,7 +419,7 @@ export default function NewCampaignPage() {
     <div className="mx-auto max-w-4xl">
       <div className="mb-6">
         <Link
-          href="/mailer/campaigns"
+          href="/campaigns"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -710,7 +710,7 @@ export default function NewCampaignPage() {
             variant="ghost"
             onClick={() => {
               if (step === 1) {
-                router.push("/mailer/campaigns");
+                router.push("/campaigns");
                 return;
               }
               setStep((prev) => Math.max(1, prev - 1));

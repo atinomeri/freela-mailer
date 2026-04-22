@@ -160,7 +160,7 @@ export default function MailerSettingsPage() {
 
       <div className="mb-4 rounded-lg border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
         Email accounts are managed in{" "}
-        <Link href="/mailer/smtp-pool" className="font-medium text-foreground underline-offset-4 hover:underline">
+        <Link href="/smtp-pool" className="font-medium text-foreground underline-offset-4 hover:underline">
           Sending Accounts
         </Link>
         .

@@ -1,5 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function RootPage() {
-  redirect("/mailer");
-}
+export { default } from "./mailer/page";

@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
 const ADMIN_NAV = [
-  { href: "/mailer/admin", label: "Overview" },
-  { href: "/mailer/admin/topup", label: "Top Up" },
-  { href: "/mailer/admin/payments", label: "Payments" },
-  { href: "/mailer/admin/unsubscribed", label: "Unsubscribed" },
+  { href: "/admin", label: "Overview" },
+  { href: "/admin/topup", label: "Top Up" },
+  { href: "/admin/payments", label: "Payments" },
+  { href: "/admin/unsubscribed", label: "Unsubscribed" },
 ] as const;
 
 export default function MailerAdminLayout({ children }: { children: React.ReactNode }) {
@@ -46,8 +46,8 @@ export default function MailerAdminLayout({ children }: { children: React.ReactN
       <nav className="flex flex-wrap items-center gap-2 text-sm">
         {ADMIN_NAV.map((item) => {
           const active =
-            item.href === "/mailer/admin"
-              ? pathname === "/mailer/admin"
+            item.href === "/admin"
+              ? pathname === "/admin"
               : pathname.startsWith(item.href);
           return (
             <Link

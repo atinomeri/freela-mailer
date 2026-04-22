@@ -21,13 +21,13 @@ import { useState } from "react";
 import { PageSpinner } from "@/components/ui/spinner";
 
 const NAV_ITEMS = [
-  { href: "/mailer", key: "nav.dashboard", icon: LayoutDashboard, adminOnly: false },
-  { href: "/mailer/campaigns", key: "nav.campaigns", icon: Mail, adminOnly: false },
-  { href: "/mailer/contacts", key: "nav.contacts", icon: Users, adminOnly: false },
-  { href: "/mailer/templates", key: "nav.templates", icon: FileText, adminOnly: false },
-  { href: "/mailer/reports", key: "nav.reports", icon: History, adminOnly: false },
-  { href: "/mailer/settings", key: "nav.settings", icon: Settings, adminOnly: false },
-  { href: "/mailer/admin", key: "nav.admin", icon: ShieldCheck, adminOnly: true },
+  { href: "/", key: "nav.dashboard", icon: LayoutDashboard, adminOnly: false },
+  { href: "/campaigns", key: "nav.campaigns", icon: Mail, adminOnly: false },
+  { href: "/contacts", key: "nav.contacts", icon: Users, adminOnly: false },
+  { href: "/templates", key: "nav.templates", icon: FileText, adminOnly: false },
+  { href: "/reports", key: "nav.reports", icon: History, adminOnly: false },
+  { href: "/settings", key: "nav.settings", icon: Settings, adminOnly: false },
+  { href: "/admin", key: "nav.admin", icon: ShieldCheck, adminOnly: true },
 ] as const;
 
 export function MailerShell({ children }: { children: React.ReactNode }) {
@@ -50,7 +50,7 @@ export function MailerShell({ children }: { children: React.ReactNode }) {
   }
 
   const isActive = (href: string) =>
-    href === "/mailer" ? pathname === "/mailer" : pathname.startsWith(href);
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
     <div className="flex min-h-dvh bg-muted/30">
@@ -71,7 +71,7 @@ export function MailerShell({ children }: { children: React.ReactNode }) {
       >
         {/* Logo area */}
         <div className="flex h-16 items-center justify-between border-b border-border px-6">
-          <Link href="/mailer" className="flex items-center gap-2" onClick={() => setSidebarOpen(false)}>
+          <Link href="/" className="flex items-center gap-2" onClick={() => setSidebarOpen(false)}>
             <Mail className="h-5 w-5 text-primary" />
             <span className="text-lg font-semibold">{t("brand")}</span>
           </Link>

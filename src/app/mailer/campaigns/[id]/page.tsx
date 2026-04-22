@@ -296,7 +296,7 @@ export default function CampaignDetailPage() {
         method: "DELETE",
       });
       if (res.ok || res.status === 204) {
-        router.push("/mailer/campaigns");
+        router.push("/campaigns");
       } else {
         const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
         setError(getApiError(body, t("errors.deleteCampaignFailed")));
@@ -374,7 +374,7 @@ export default function CampaignDetailPage() {
     return (
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-muted-foreground">{t("campaignDetail.notFound")}</p>
-        <Link href="/mailer/campaigns" className="mt-2 inline-block text-sm text-primary hover:underline">
+        <Link href="/campaigns" className="mt-2 inline-block text-sm text-primary hover:underline">
           {t("actions.backToCampaigns")}
         </Link>
       </div>
@@ -432,7 +432,7 @@ export default function CampaignDetailPage() {
     <div className="mx-auto max-w-3xl">
       <div className="mb-6">
         <Link
-          href="/mailer/campaigns"
+          href="/campaigns"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -480,7 +480,7 @@ export default function CampaignDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push(`/mailer/reports?campaignId=${campaign.id}`)}
+                onClick={() => router.push(`/reports?campaignId=${campaign.id}`)}
               >
                 <Download className="h-4 w-4" />
                 Export report
@@ -534,7 +534,7 @@ export default function CampaignDetailPage() {
             {contactLists.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {t("campaignDetail.contactListsEmpty")}{" "}
-                <Link href="/mailer/contacts" className="text-primary hover:underline">
+                <Link href="/contacts" className="text-primary hover:underline">
                   {t("contacts.createOneFirst")}
                 </Link>
               </p>
@@ -662,7 +662,7 @@ export default function CampaignDetailPage() {
       {retrySuccessCampaignId && (
         <div className="mt-4 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
           {t("campaignDetail.retryCreated")}{" "}
-          <Link href={`/mailer/campaigns/${retrySuccessCampaignId}`} className="underline">
+          <Link href={`/campaigns/${retrySuccessCampaignId}`} className="underline">
             {t("campaignDetail.openRetryCampaign")}
           </Link>
         </div>

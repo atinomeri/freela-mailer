@@ -95,7 +95,7 @@ export default function CampaignsPage() {
             {t("campaigns.description")}
           </p>
         </div>
-        <ButtonLink href="/mailer/campaigns/new" size="sm">
+        <ButtonLink href="/campaigns/new" size="sm">
           <Plus className="h-4 w-4" />
           {t("actions.newCampaign")}
         </ButtonLink>
@@ -108,7 +108,7 @@ export default function CampaignsPage() {
           icon={<Mail className="h-12 w-12" />}
           title={t("campaigns.noCampaignsTitle")}
           description={t("campaigns.noCampaignsDescription")}
-          action={{ label: t("actions.newCampaign"), href: "/mailer/campaigns/new" }}
+          action={{ label: t("actions.newCampaign"), href: "/campaigns/new" }}
         />
       ) : (
         <>
@@ -117,7 +117,7 @@ export default function CampaignsPage() {
               const badge = STATUS_BADGE[campaign.status] ?? STATUS_BADGE.DRAFT;
 
               return (
-                <Link key={campaign.id} href={`/mailer/campaigns/${campaign.id}`}>
+                <Link key={campaign.id} href={`/campaigns/${campaign.id}`}>
                   <Card className="p-4 cursor-pointer" clickable>
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0 flex-1">

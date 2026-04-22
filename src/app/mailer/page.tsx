@@ -210,7 +210,7 @@ export default function MailerDashboard() {
       <Card className="mt-6 p-6" hover={false}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold">{t("dashboard.recentActivity")}</h2>
-          <ButtonLink href="/mailer/campaigns" variant="outline" size="sm">
+          <ButtonLink href="/campaigns" variant="outline" size="sm">
             {t("dashboard.viewAllCampaigns")}
           </ButtonLink>
         </div>
@@ -235,7 +235,7 @@ export default function MailerDashboard() {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <ButtonLink href={`/mailer/campaigns/${campaign.id}`} variant="ghost" size="sm">
+                        <ButtonLink href={`/campaigns/${campaign.id}`} variant="ghost" size="sm">
                           {campaign.name}
                         </ButtonLink>
                         <Badge variant={statusBadgeVariant(campaign.status)} size="sm">
@@ -262,7 +262,7 @@ export default function MailerDashboard() {
         <Card className="mt-4 p-5" hover={false}>
           <p className="text-sm text-muted-foreground">{t("dashboard.emptyContacts")}</p>
           <div className="mt-3">
-            <ButtonLink href="/mailer/contacts" size="sm">
+            <ButtonLink href="/contacts" size="sm">
               {t("actions.manageContacts")}
             </ButtonLink>
           </div>
