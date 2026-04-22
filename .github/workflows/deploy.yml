@@ -1,0 +1,123 @@
+name: Mailer Deploy
+
+on:
+  workflow_run:
+    workflows: ["Mailer CI"]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: mailer-deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy mailer to VPS
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
+    environment:
+      name: production
+    permissions:
+      contents: read
+    env:
+      VPS_HOST: ${{ secrets.MAILER_VPS_HOST }}
+      VPS_USER: ${{ secrets.MAILER_VPS_USER }}
+      VPS_PORT: ${{ secrets.MAILER_VPS_SSH_PORT }}
+      VPS_APP_DIR: ${{ secrets.MAILER_VPS_APP_DIR }}
+      SSH_PRIVATE_KEY: ${{ secrets.MAILER_VPS_SSH_PRIVATE_KEY }}
+      VPS_HOST_KEY: ${{ secrets.MAILER_VPS_HOST_KEY || '' }}
+      DEPLOY_BRANCH: main
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      HEALTHCHECK_URL: ${{ secrets.MAILER_DEPLOY_HEALTHCHECK_URL }}
+
+    steps:
+      - name: Validate required secrets
+        run: |
+          set -euo pipefail
+          for v in VPS_HOST VPS_USER VPS_PORT VPS_APP_DIR SSH_PRIVATE_KEY; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing required secret: $v"
+              exit 1
+            fi
+          done
+
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          if [ -n "$VPS_HOST_KEY" ]; then
+            printf '%s\n' "$VPS_HOST_KEY" > ~/.ssh/known_hosts
+          else
+            echo "::warning::MAILER_VPS_HOST_KEY is not set; using ssh-keyscan fallback."
+            if ! ssh-keyscan -T 10 -p "$VPS_PORT" -H "$VPS_HOST" > ~/.ssh/known_hosts 2>/dev/null; then
+              echo "::warning::ssh-keyscan failed; disabling strict host key checking."
+              printf 'Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n' > ~/.ssh/config
+              chmod 600 ~/.ssh/config
+            fi
+          fi
+          [ -f ~/.ssh/known_hosts ] && chmod 644 ~/.ssh/known_hosts || true
+
+      - name: Deploy on server
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "APP_DIR='$VPS_APP_DIR' BRANCH='$DEPLOY_BRANCH' EXPECTED_SHA='$DEPLOY_SHA' bash -s" <<'EOF'
+          set -euo pipefail
+          cd "$APP_DIR"
+          echo "==> Repo: $(pwd)"
+          echo "==> Origin: $(git remote get-url origin)"
+          echo "==> Git status before sync:"
+          git status --short || true
+
+          # Force-sync to remote branch.
+          git fetch origin "$BRANCH"
+          git reset --hard "origin/$BRANCH"
+
+          CURRENT_SHA="$(git rev-parse HEAD)"
+          echo "==> Checked out SHA: $CURRENT_SHA"
+          if [ -n "${EXPECTED_SHA:-}" ] && [ "$CURRENT_SHA" != "$EXPECTED_SHA" ]; then
+            echo "::error::Deployed SHA mismatch. Expected $EXPECTED_SHA, got $CURRENT_SHA"
+            exit 1
+          fi
+
+          cd deploy
+          COMPOSE="docker compose -p freela-mailer -f docker-compose.yml"
+
+          echo "==> Building mailer images..."
+          $COMPOSE build app worker
+
+          echo "==> Rolling update (app + worker)..."
+          if ! $COMPOSE up -d --no-deps --wait --wait-timeout 500 app worker; then
+            echo "::error::docker compose up failed"
+            $COMPOSE logs --tail=150 app worker
+            exit 1
+          fi
+
+          echo "==> Running Prisma migrate deploy..."
+          $COMPOSE exec -T app npm run prisma:migrate:deploy
+
+          echo "==> Service status"
+          $COMPOSE ps
+          EOF
+
+      - name: Health check
+        if: env.HEALTHCHECK_URL != ''
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 10); do
+            if curl --fail --show-error --silent --max-time 10 "$HEALTHCHECK_URL" > /dev/null 2>&1; then
+              echo "Health check passed (attempt $i)"
+              exit 0
+            fi
+            echo "Health check attempt $i/10 failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Health check failed after 10 attempts"
+          exit 1

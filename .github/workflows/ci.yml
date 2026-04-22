@@ -1,0 +1,72 @@
+name: Mailer CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: mailer-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://mailer:mailer_password@localhost:5432/mailer?schema=public
+      REDIS_URL: redis://localhost:6379
+      MAILER_PUBLIC_URL: http://localhost:3100
+      JWT_ACCESS_SECRET: ci_jwt_access_secret_please_override
+      JWT_REFRESH_SECRET: ci_jwt_refresh_secret_please_override
+      INTERNAL_API_SECRET: ci_internal_secret_please_override
+      SMTP_CONFIG_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: mailer
+          POSTGRES_USER: mailer
+          POSTGRES_PASSWORD: mailer_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mailer -d mailer"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm install
+
+      - name: Prisma generate
+        run: npm run prisma:generate
+
+      - name: Prisma validate
+        run: npm run prisma:validate
+
+      - name: Prisma migrate (test DB)
+        run: npm run prisma:migrate:deploy
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build

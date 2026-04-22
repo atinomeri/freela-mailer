@@ -73,3 +73,30 @@ See `scripts/rotate-smtp-crypto.mjs` for the workflow.
 Cutover is orchestrated from `freela/docs/phase4-cutover-runbook.md`. Do not
 start running this stack in production without completing the runbook's
 pre-flight checks.
+
+## CI/CD (Independent from `freela`)
+
+This repository has its own GitHub Actions pipelines:
+
+- `Mailer CI` — lint + tests + build on every push/PR.
+- `Mailer Deploy` — deploys to production on successful `main` CI (or manual run).
+
+Add these repository secrets in `atinomeri/freela-mailer`:
+
+- `MAILER_VPS_HOST` (example: `76.13.144.121`)
+- `MAILER_VPS_USER` (example: `root`)
+- `MAILER_VPS_SSH_PORT` (example: `22`)
+- `MAILER_VPS_APP_DIR` (example: `/root/freela-mailer`)
+- `MAILER_VPS_SSH_PRIVATE_KEY` (private key content for deploy user)
+- Optional: `MAILER_VPS_HOST_KEY` (pinned host key line for `known_hosts`)
+- Optional: `MAILER_DEPLOY_HEALTHCHECK_URL` (example: `https://mailer.freela.ge/api/health`)
+
+Server bootstrap (one-time):
+
+```sh
+git clone git@github.com:atinomeri/freela-mailer.git /root/freela-mailer
+cd /root/freela-mailer/deploy
+cp ../.env.example .env
+# fill real values in .env
+docker compose -p freela-mailer -f docker-compose.yml up -d --build
+```
