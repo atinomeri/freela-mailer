@@ -13,7 +13,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy mailer to VPS
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, freela-mailer-vps]
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
@@ -24,53 +24,33 @@ jobs:
     permissions:
       contents: read
     env:
-      VPS_HOST: ${{ secrets.MAILER_VPS_HOST || secrets.VPS_HOST }}
-      VPS_USER: ${{ secrets.MAILER_VPS_USER || secrets.VPS_USER }}
-      VPS_PORT: ${{ secrets.MAILER_VPS_SSH_PORT || secrets.VPS_SSH_PORT }}
-      VPS_APP_DIR: ${{ secrets.MAILER_VPS_APP_DIR || secrets.VPS_APP_DIR }}
-      SSH_PRIVATE_KEY: ${{ secrets.MAILER_VPS_SSH_PRIVATE_KEY || secrets.VPS_SSH_PRIVATE_KEY }}
-      VPS_HOST_KEY: ${{ secrets.MAILER_VPS_HOST_KEY || secrets.VPS_HOST_KEY || '' }}
+      VPS_APP_DIR: ${{ secrets.MAILER_VPS_APP_DIR || secrets.VPS_APP_DIR || '/root/freela-mailer' }}
       DEPLOY_BRANCH: main
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       HEALTHCHECK_URL: ${{ secrets.MAILER_DEPLOY_HEALTHCHECK_URL || secrets.DEPLOY_HEALTHCHECK_URL }}
 
     steps:
-      - name: Validate required secrets
+      - name: Validate deploy path
         run: |
           set -euo pipefail
-          for v in VPS_HOST VPS_USER VPS_PORT VPS_APP_DIR SSH_PRIVATE_KEY; do
-            if [ -z "${!v}" ]; then
-              echo "::error::Missing required secret: $v"
-              exit 1
-            fi
-          done
-
-      - name: Configure SSH
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          if [ -n "$VPS_HOST_KEY" ]; then
-            printf '%s\n' "$VPS_HOST_KEY" > ~/.ssh/known_hosts
-          else
-            echo "::warning::MAILER_VPS_HOST_KEY is not set; using ssh-keyscan fallback."
-            if ! ssh-keyscan -T 10 -p "$VPS_PORT" -H "$VPS_HOST" > ~/.ssh/known_hosts 2>/dev/null; then
-              echo "::warning::ssh-keyscan failed; disabling strict host key checking."
-              printf 'Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n' > ~/.ssh/config
-              chmod 600 ~/.ssh/config
-            fi
+          if [ -z "${VPS_APP_DIR:-}" ]; then
+            echo "::error::VPS_APP_DIR is empty"
+            exit 1
           fi
-          [ -f ~/.ssh/known_hosts ] && chmod 644 ~/.ssh/known_hosts || true
+          mkdir -p "$VPS_APP_DIR"
 
-      - name: Deploy on server
+      - name: Deploy in-place on VPS
         run: |
           set -euo pipefail
-          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
-            "APP_DIR='$VPS_APP_DIR' BRANCH='$DEPLOY_BRANCH' EXPECTED_SHA='$DEPLOY_SHA' bash -s" <<'EOF'
-          set -euo pipefail
-          cd "$APP_DIR"
+          cd "$VPS_APP_DIR"
+
+          if [ ! -d .git ]; then
+            echo "==> Bootstrapping git repo in $VPS_APP_DIR"
+            git init
+            git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          fi
+
+          git config --global --add safe.directory "$VPS_APP_DIR"
           echo "==> Repo: $(pwd)"
           echo "==> Origin: $(git remote get-url origin)"
           echo "==> Git status before sync:"
@@ -105,7 +85,6 @@ jobs:
 
           echo "==> Service status"
           $COMPOSE ps
-          EOF
 
       - name: Health check
         if: env.HEALTHCHECK_URL != ''
