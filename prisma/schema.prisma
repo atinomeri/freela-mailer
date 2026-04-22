@@ -1,0 +1,551 @@
+// FREELA MAILER — isolated Prisma schema.
+// Contains only mailer-owned models. freela User / Project / Thread / Review /
+// Profile / Notification / SitePage etc. are explicitly NOT present here.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ════════════════════════════════════════════
+// Desktop updates / licensing
+// ════════════════════════════════════════════
+
+model AppRelease {
+  id            String   @id @default(uuid())
+  version       String   @unique
+  releaseNotes  String?  @db.Text
+  downloadUrl   String
+  isMandatory   Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model LicenseKey {
+  id        String    @id @default(uuid())
+  key       String    @unique
+  tier      String
+  hwid      String?
+  isActive  Boolean   @default(true)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([key])
+  @@index([hwid])
+}
+
+// ════════════════════════════════════════════
+// Tracking / Unsubscribe
+// ════════════════════════════════════════════
+
+model EmailTrackingEvent {
+  id         String   @id @default(cuid())
+  campaignId String?
+  email      String?  // Deprecated: plaintext; scheduled for removal.
+  emailHash  String?  // SHA-256 hash of recipient email
+  eventType  String   // 'OPEN' | 'CLICK'
+  url        String?
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId, eventType])
+  @@index([emailHash, eventType])
+  @@index([createdAt])
+}
+
+model UnsubscribedEmail {
+  id            String       @id @default(cuid())
+  email         String
+  source        String       @default("link")
+  createdAt     DateTime     @default(now())
+
+  desktopUserId String?
+  desktopUser   DesktopUser? @relation(fields: [desktopUserId], references: [id], onDelete: SetNull)
+
+  @@unique([email, desktopUserId])
+  @@index([createdAt])
+  @@index([desktopUserId])
+}
+
+// ════════════════════════════════════════════
+// Desktop users + auth
+// ════════════════════════════════════════════
+
+enum DesktopUserType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum DesktopLedgerEntryType {
+  TOPUP
+  QUOTA_RESERVE
+  QUOTA_REFUND
+  ADJUSTMENT
+  PAYMENT_CAPTURE
+  PAYMENT_REFUND
+}
+
+enum DesktopPaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum DesktopPaymentProvider {
+  MANUAL
+  STRIPE
+  BOG
+}
+
+enum DesktopSendingAccountProvider {
+  GMAIL
+  OUTLOOK
+  YAHOO
+  CUSTOM
+}
+
+enum DesktopSendingAccountStatus {
+  NOT_TESTED
+  CONNECTED
+  FAILED
+  NEEDS_ATTENTION
+  PAUSED
+  TESTING
+}
+
+model DesktopUser {
+  id            String          @id @default(cuid())
+  userType      DesktopUserType
+
+  firstName      String?
+  lastName       String?
+  personalNumber String?         @unique
+  birthDate      DateTime?
+
+  companyName    String?
+  companyIdCode  String?         @unique
+
+  phone         String
+  email         String          @unique
+  passwordHash  String
+  balance       Int             @default(0)
+  isAdmin       Boolean         @default(false)
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  refreshTokens     DesktopRefreshToken[]
+  quotas            DesktopQuota[]
+  payments          DesktopPayment[]
+  ledgerEntries     DesktopLedgerEntry[]
+  campaignReports   CampaignReport[]
+  campaigns         Campaign[]
+  contactLists      ContactList[]
+  unsubscribedEmails UnsubscribedEmail[]
+  smtpConfig        DesktopSmtpConfig?
+  smtpPoolAccounts  DesktopSmtpPoolAccount[]
+  sendingAccounts   DesktopSendingAccount[]
+  campaignTemplates CampaignTemplate[]
+  warmupSenders     DesktopWarmupSender[]
+  reportExports     ReportExportJob[]
+
+  @@index([email])
+}
+
+model DesktopRefreshToken {
+  id        String      @id @default(cuid())
+  userId    String
+  user      DesktopUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String      @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime    @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model DesktopSmtpConfig {
+  id            String      @id @default(cuid())
+  desktopUserId String      @unique
+  desktopUser   DesktopUser @relation(fields: [desktopUserId], references: [id], onDelete: Cascade)
+
+  host          String
+  port          Int         @default(465)
+  secure        Boolean     @default(true)
+  username      String
+  passwordEnc   String
+  fromEmail     String?
+  fromName      String?
+  trackOpens    Boolean     @default(true)
+  trackClicks   Boolean     @default(true)
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model DesktopSmtpPoolAccount {
+  id               String      @id @default(cuid())
+  desktopUserId    String
+  desktopUser      DesktopUser @relation(fields: [desktopUserId], references: [id], onDelete: Cascade)
+
+  host             String
+  port             Int         @default(465)
+  secure           Boolean     @default(true)
+  username         String
+  passwordEnc      String
+  fromEmail        String?
+  fromName         String?
+
+  proxyType        String?
+  proxyHost        String?
+  proxyPort        Int?
+  proxyUsername    String?
+  proxyPasswordEnc String?
+
+  active           Boolean     @default(true)
+  failCount        Int         @default(0)
+  priority         Int         @default(0)
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([desktopUserId, active, priority, createdAt])
+}
+
+model DesktopSendingAccount {
+  id                 String                        @id @default(cuid())
+  desktopUserId      String
+  desktopUser        DesktopUser                   @relation(fields: [desktopUserId], references: [id], onDelete: Cascade)
+
+  provider           DesktopSendingAccountProvider
+  host               String
+  port               Int                           @default(465)
+  secure             Boolean                       @default(true)
+  username           String
+  passwordEnc        String
+  senderEmail        String?
+  senderName         String?
+  rotationEnabled    Boolean                       @default(true)
+  status             DesktopSendingAccountStatus   @default(NOT_TESTED)
+  active             Boolean                       @default(true)
+  failCount          Int                           @default(0)
+  lastTestedAt       DateTime?
+  lastTestSuccess    Boolean?
+  lastTestError      String?
+  lastTestLatencyMs  Int?
+
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+
+  @@unique([desktopUserId, provider, host, port, username])
+  @@index([desktopUserId, status, rotationEnabled, createdAt])
+  @@index([desktopUserId, active, createdAt])
+}
+
+model DesktopQuota {
+  id         String      @id @default(cuid())
+  userId     String
+  user       DesktopUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allowed    Int
+  charged    Int
+  sent       Int         @default(0)
+  failed     Int         @default(0)
+  refunded   Int         @default(0)
+  status     String      @default("active")
+  expiresAt  DateTime
+  createdAt  DateTime    @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([status, expiresAt])
+}
+
+model DesktopPayment {
+  id                 String                 @id @default(cuid())
+  userId             String
+  user               DesktopUser            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount             Int
+  currency           String                 @default("GEL")
+  status             DesktopPaymentStatus   @default(PENDING)
+  provider           DesktopPaymentProvider @default(MANUAL)
+  externalPaymentId  String?
+  metadata           Json?
+  processedByAdminId String?
+  completedAt        DateTime?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([externalPaymentId])
+}
+
+model DesktopLedgerEntry {
+  id             String                 @id @default(cuid())
+  userId         String
+  user           DesktopUser            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           DesktopLedgerEntryType
+  amount         Int
+  balanceBefore  Int
+  balanceAfter   Int
+  currency       String                 @default("GEL")
+  referenceType  String?
+  referenceId    String?
+  description    String?
+  metadata       Json?
+  idempotencyKey String?                @unique
+  createdAt      DateTime               @default(now())
+
+  @@index([userId, createdAt])
+  @@index([referenceType, referenceId])
+}
+
+model CampaignReport {
+  id             String       @id @default(uuid())
+  campaignId     String       @unique
+  desktopUserId  String?
+  desktopUser    DesktopUser? @relation(fields: [desktopUserId], references: [id], onDelete: SetNull)
+  hwid           String
+  licenseKey     String?
+  total          Int
+  sent           Int
+  failed         Int
+  startedAt      DateTime
+  finishedAt     DateTime
+  events         Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([desktopUserId])
+}
+
+model CampaignTemplate {
+  id            String      @id @default(cuid())
+  desktopUserId String
+  desktopUser   DesktopUser @relation(fields: [desktopUserId], references: [id], onDelete: Cascade)
+
+  name          String
+  category      String      @default("custom")
+  subject       String
+  html          String      @db.Text
+  description   String?     @db.Text
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([desktopUserId, createdAt])
+}
+
+// ════════════════════════════════════════════
+// Campaigns
+// ════════════════════════════════════════════
+
+enum CampaignStatus {
+  DRAFT
+  QUEUED
+  SENDING
+  PAUSED
+  COMPLETED
+  FAILED
+}
+
+enum CampaignScheduleMode {
+  ONCE
+  DAILY
+}
+
+enum CampaignPreflightStatus {
+  GOOD
+  WARNING
+  CRITICAL
+}
+
+enum ReportExportSection {
+  SENT
+  OPENED
+  CLICKED
+  ALL
+}
+
+enum ReportExportFormat {
+  CSV
+  XLSX
+}
+
+enum ReportExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Campaign {
+  id              String               @id @default(cuid())
+  desktopUserId   String
+  desktopUser     DesktopUser          @relation(fields: [desktopUserId], references: [id], onDelete: Cascade)
+
+  name            String
+  subject         String
+  previewText     String?
+  senderName      String?
+  senderEmail     String?
+  html            String               @db.Text
+  status          CampaignStatus       @default(DRAFT)
+  scheduleMode    CampaignScheduleMode @default(ONCE)
+
+  contactListId   String?
+  contactList     ContactList?         @relation(fields: [contactListId], references: [id], onDelete: SetNull)
+
+  scheduledAt     DateTime?
+  dailyLimit      Int?
+  dailySendTime   String?
+  dailySentOffset Int                  @default(0)
+  dailyTotalCount Int?
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  totalCount      Int                  @default(0)
+  sentCount       Int                  @default(0)
+  failedCount     Int                  @default(0)
+  openCount       Int                  @default(0)
+  clickCount      Int                  @default(0)
+  bounceCount     Int                  @default(0)
+  preflightStatus CampaignPreflightStatus?
+  preflightRecommendations Json?
+  preflightCheckedAt DateTime?
+
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  failedRecipients CampaignFailedRecipient[]
+  recipientActivity CampaignRecipientActivity[]
+  reportExports     ReportExportJob[]
+
+  @@index([desktopUserId, createdAt])
+  @@index([status])
+}
+
+model CampaignFailedRecipient {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  email       String
+  reason      String?
+  createdAt   DateTime @default(now())
+
+  @@unique([campaignId, email])
+  @@index([campaignId, createdAt])
+}
+
+model CampaignRecipientActivity {
+  id             String   @id @default(cuid())
+  campaignId     String
+  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  email          String
+  emailHash      String
+  sender         String?
+  sentAt         DateTime
+
+  firstOpenedAt  DateTime?
+  lastOpenedAt   DateTime?
+  opensCount     Int      @default(0)
+
+  firstClickedAt DateTime?
+  lastClickedAt  DateTime?
+  clicksCount    Int      @default(0)
+  lastClickedUrl String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([campaignId, emailHash])
+  @@index([campaignId, sentAt])
+  @@index([campaignId, firstOpenedAt])
+  @@index([campaignId, firstClickedAt])
+}
+
+model ReportExportJob {
+  id            String              @id @default(cuid())
+  desktopUserId String
+  desktopUser   DesktopUser         @relation(fields: [desktopUserId], references: [id], onDelete: Cascade)
+  campaignId    String?
+  campaign      Campaign?           @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  section       ReportExportSection
+  format        ReportExportFormat
+  status        ReportExportStatus  @default(PENDING)
+  dateFrom      DateTime?
+  dateTo        DateTime?
+  rowCount      Int                 @default(0)
+  filePath      String?
+  fileName      String?
+  error         String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([desktopUserId, status, createdAt])
+}
+
+model DesktopWarmupSender {
+  id            String      @id @default(cuid())
+  desktopUserId String
+  desktopUser   DesktopUser @relation(fields: [desktopUserId], references: [id], onDelete: Cascade)
+
+  senderKey     String
+  firstSeenAt   DateTime    @default(now())
+  lastSentDate  String?
+  sentToday     Int         @default(0)
+  totalSent     Int         @default(0)
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([desktopUserId, senderKey])
+  @@index([desktopUserId, senderKey])
+}
+
+// ════════════════════════════════════════════
+// Contact Lists & Contacts
+// ════════════════════════════════════════════
+
+model ContactList {
+  id              String      @id @default(cuid())
+  desktopUserId   String
+  desktopUser     DesktopUser @relation(fields: [desktopUserId], references: [id], onDelete: Cascade)
+
+  name            String
+  columns         Json
+  emailColumn     String
+  contactCount    Int         @default(0)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  contacts        Contact[]
+  campaigns       Campaign[]
+
+  @@index([desktopUserId, createdAt])
+}
+
+model Contact {
+  id              String      @id @default(cuid())
+  contactListId   String
+  contactList     ContactList @relation(fields: [contactListId], references: [id], onDelete: Cascade)
+
+  email           String
+  data            Json?
+
+  createdAt       DateTime    @default(now())
+
+  @@unique([contactListId, email])
+  @@index([contactListId])
+  @@index([email])
+}

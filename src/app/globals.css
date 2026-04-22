@@ -1,0 +1,481 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Safe area insets for iPhone notch/home indicator */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+}
+
+:root {
+  color-scheme: light;
+  /* Design system: SaaS / FinTech minimal palette */
+  --ds-primary: 225 84% 56%;
+  --ds-dark: 222 47% 11%;
+  --ds-accent: 186 85% 42%;
+  --ds-background: 0 0% 100%;
+
+  /* Typography scale */
+  --font-size-h1: clamp(2.125rem, 1.5rem + 2.2vw, 3.25rem);
+  --font-size-h2: clamp(1.625rem, 1.25rem + 1.35vw, 2.375rem);
+  --font-size-h3: clamp(1.25rem, 1.1rem + 0.85vw, 1.75rem);
+  --font-size-body: 1rem;
+  --font-size-small: 0.875rem;
+  --line-height-heading: 1.18;
+  --line-height-body: 1.68;
+
+  /* Spacing system (8px grid) */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-6: 48px;
+  --space-8: 64px;
+
+  --background: var(--ds-background);
+  --foreground: var(--ds-dark);
+  --card: 0 0% 100%;
+  --card-foreground: var(--ds-dark);
+  --muted: 220 18% 97%;
+  --muted-foreground: 215 16% 47%;
+  --primary: var(--ds-primary);
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 18% 97%;
+  --secondary-foreground: var(--ds-dark);
+  --accent: var(--ds-accent);
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+  --ring: var(--ds-primary);
+  --border: 220 16% 94%;
+  --input: 220 16% 94%;
+  --radius: 12px;
+  
+  /* Toast colors */
+  --toast-bg: 0 0% 100%;
+  --toast-border: 214 32% 91%;
+}
+
+.dark {
+  color-scheme: dark;
+  --ds-primary: 225 90% 66%;
+  --ds-dark: 210 40% 98%;
+  --ds-accent: 186 88% 48%;
+  --ds-background: 222 47% 7%;
+
+  --background: var(--ds-background);
+  --foreground: var(--ds-dark);
+  --card: 222 47% 9%;
+  --card-foreground: 210 40% 98%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+  --primary: var(--ds-primary);
+  --primary-foreground: 0 0% 100%;
+  --secondary: 217 33% 17%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: var(--ds-accent);
+  --accent-foreground: 222 47% 8%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 70% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+  --ring: var(--ds-primary);
+  --border: 217 33% 20%;
+  --input: 217 33% 20%;
+  
+  /* Toast colors */
+  --toast-bg: 222 47% 10%;
+  --toast-border: 217 33% 20%;
+}
+
+html,
+body {
+  height: 100%;
+  /* Prevent rubber-banding on iOS */
+  overscroll-behavior-y: none;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-inter), var(--font-georgian), "Segoe UI", Arial, sans-serif;
+  }
+
+  h1 {
+    font-size: var(--font-size-h1);
+    line-height: var(--line-height-heading);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  h2 {
+    font-size: var(--font-size-h2);
+    line-height: var(--line-height-heading);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-size: var(--font-size-h3);
+    line-height: var(--line-height-heading);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: hsl(var(--foreground));
+  }
+
+  body {
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    background: hsl(var(--background));
+  }
+
+  p,
+  li {
+    color: hsl(var(--foreground) / 0.86);
+  }
+
+  p,
+  li,
+  input,
+  textarea,
+  select,
+  button {
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+  }
+
+  small {
+    font-size: var(--font-size-small);
+    line-height: 1.45;
+  }
+}
+
+body {
+  background-image: none;
+  color: hsl(var(--foreground));
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
+  letter-spacing: 0;
+}
+
+.dark body {
+  background-image: none;
+}
+
+::selection {
+  background: hsl(var(--primary) / 0.15);
+}
+
+/* Skeleton animation */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Hero visuals */
+.hero-mesh {
+  background-image:
+    radial-gradient(circle at 18% 18%, hsl(var(--primary) / 0.2), transparent 42%),
+    radial-gradient(circle at 82% 6%, hsl(var(--success) / 0.14), transparent 38%),
+    radial-gradient(circle at 52% 72%, hsl(var(--primary) / 0.12), transparent 46%);
+}
+
+.hero-pattern {
+  background-image:
+    linear-gradient(to right, hsl(var(--foreground) / 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--foreground) / 0.04) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(90% 70% at 50% 40%, #000 58%, transparent 100%);
+}
+
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes hero-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-6px, 8px, 0); }
+}
+
+.animate-hero-float {
+  animation: hero-float 6s ease-in-out infinite;
+}
+
+.animate-hero-float-delayed {
+  animation: hero-float 7s ease-in-out infinite;
+  animation-delay: 1.2s;
+}
+
+.animate-hero-drift {
+  animation: hero-drift 9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero-float,
+  .animate-hero-float-delayed,
+  .animate-hero-drift {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* Page transitions */
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes page-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.page-enter {
+  animation: page-fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.page-exit {
+  animation: page-fade-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Toast animations */
+@keyframes toast-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Modal animations */
+@keyframes modal-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-content-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Marquee / ticker animation */
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+  will-change: transform;
+}
+
+.marquee-wrap:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+/* Tooltip animation */
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Focus ring utility */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+/* =========================================
+   PWA / Mobile optimizations
+   ========================================= */
+
+/* Safe area padding utilities */
+.safe-top {
+  padding-top: var(--safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+.safe-left {
+  padding-left: var(--safe-area-inset-left);
+}
+
+.safe-right {
+  padding-right: var(--safe-area-inset-right);
+}
+
+.safe-x {
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+}
+
+.safe-y {
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+.safe-all {
+  padding-top: var(--safe-area-inset-top);
+  padding-right: var(--safe-area-inset-right);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+}
+
+/* Touch feedback - native-like press effect */
+@supports (touch-action: manipulation) {
+  .touch-feedback {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+  }
+
+  .touch-feedback:active {
+    transform: scale(0.97);
+    opacity: 0.85;
+  }
+}
+
+/* Haptic-style button feedback */
+.btn-haptic {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  transition: transform 0.24s ease-out, box-shadow 0.24s ease-out, background-color 0.24s ease-out, opacity 0.24s ease-out;
+}
+
+.btn-haptic:active {
+  transform: scale(0.985);
+  opacity: 0.96;
+}
+
+/* Card touch feedback */
+.card-touch {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform 0.28s ease-out, box-shadow 0.28s ease-out;
+}
+
+.card-touch:active {
+  transform: scale(0.992);
+  box-shadow: 0 8px 20px hsl(var(--foreground) / 0.08);
+}
+
+/* Prevent text selection on interactive elements */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Smooth scrolling for iOS */
+.scroll-smooth-ios {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Fix for iOS Safari 100vh issue in PWA */
+@supports (-webkit-touch-callout: none) {
+  .h-screen-safe {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+  
+  .min-h-screen-safe {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Standalone PWA mode styles */
+@media all and (display-mode: standalone) {
+  /* Header with notch padding */
+  .pwa-header {
+    padding-top: var(--safe-area-inset-top);
+  }
+  
+  /* Footer with home indicator padding */
+  .pwa-footer {
+    padding-bottom: var(--safe-area-inset-bottom);
+  }
+  
+  /* Fixed bottom elements */
+  .pwa-bottom-fixed {
+    padding-bottom: calc(1rem + var(--safe-area-inset-bottom));
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .touch-feedback:active,
+  .btn-haptic:active,
+  .card-touch:active {
+    transform: none !important;
+  }
+
+  .btn-haptic,
+  .card-touch {
+    transition: none !important;
+  }
+}

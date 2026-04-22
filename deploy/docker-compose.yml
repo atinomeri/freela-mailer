@@ -1,0 +1,119 @@
+# freela-mailer standalone deployment.
+#
+# After Phase 4 cutover, this file is the single source of truth for the
+# mailer stack. It is INDEPENDENT from freela/. Deploy on a host reachable
+# from freela.ge's Caddy (the compat-proxy upstream), or behind a dedicated
+# mailer.freela.ge vhost.
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: mailer-app
+    restart: unless-stopped
+    stop_grace_period: 30s
+    env_file:
+      - ./.env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      # Required in prod — forever-host baked into outgoing emails.
+      MAILER_PUBLIC_URL: ${MAILER_PUBLIC_URL:?MAILER_PUBLIC_URL is required in production}
+      MAILER_EXPORT_DIR: /data/exports
+      # No BullMQ consumption inside the web process — the `worker` service owns it.
+      ENABLE_IN_PROCESS_CAMPAIGN_WORKER: "false"
+      RATE_LIMIT_KEY_PREFIX: "mailer:"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - mailer_exports:/data/exports
+    networks:
+      - mailer_net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 120s
+
+  worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: mailer-worker
+    restart: unless-stopped
+    stop_grace_period: 90s
+    env_file:
+      - ./.env
+    environment:
+      NODE_ENV: production
+      MAILER_PUBLIC_URL: ${MAILER_PUBLIC_URL:?MAILER_PUBLIC_URL is required in production}
+      MAILER_EXPORT_DIR: /data/exports
+      WORKER_HEALTH_PORT: "3001"
+      ENABLE_IN_PROCESS_CAMPAIGN_WORKER: "true"
+      RATE_LIMIT_KEY_PREFIX: "mailer:"
+    command: ["node", "--import", "tsx", "scripts/mailer-worker.mjs"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - mailer_exports:/data/exports
+    networks:
+      - mailer_net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3001/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  db:
+    image: postgres:16
+    container_name: mailer-db
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - mailer_pg_data:/var/lib/postgresql/data
+    networks:
+      - mailer_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: mailer-redis
+    restart: unless-stopped
+    volumes:
+      - mailer_redis_data:/data
+    networks:
+      - mailer_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  mailer_pg_data:
+  mailer_redis_data:
+  mailer_exports:
+
+networks:
+  mailer_net:
+    driver: bridge
