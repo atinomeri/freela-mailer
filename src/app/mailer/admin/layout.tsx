@@ -1,10 +1,11 @@
 "use client";
 
 import { useMailerAuth } from "@/lib/mailer-auth";
+import { PageSpinner } from "@/components/ui/spinner";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
 
 const ADMIN_NAV = [
   { href: "/admin", label: "Overview" },
@@ -14,31 +15,52 @@ const ADMIN_NAV = [
 ] as const;
 
 export default function MailerAdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useMailerAuth();
+  const { user, loading, apiFetch } = useMailerAuth();
   const pathname = usePathname();
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
 
-  if (loading) return null;
+  useEffect(() => {
+    let cancelled = false;
+    setAuthorized(false);
 
-  if (!user) {
-    return (
-      <Card className="p-6">
-        <div className="font-medium">Not signed in</div>
-        <div className="mt-2 text-sm text-muted-foreground">
-          Please sign in to access mailer admin.
-        </div>
-      </Card>
-    );
-  }
+    async function verifyAccess() {
+      if (loading) return;
 
-  if (!user.isAdmin) {
-    return (
-      <Card className="p-6">
-        <div className="font-medium">Access denied</div>
-        <div className="mt-2 text-sm text-muted-foreground">
-          You do not have admin privileges for the mailer.
-        </div>
-      </Card>
-    );
+      if (!user) {
+        router.replace("/");
+        return;
+      }
+
+      try {
+        const res = await apiFetch("/api/desktop/account/me");
+        if (!res.ok) {
+          router.replace("/");
+          return;
+        }
+
+        const body = (await res.json()) as { isAdmin?: boolean };
+        if (!body.isAdmin) {
+          router.replace("/");
+          return;
+        }
+
+        if (!cancelled) {
+          setAuthorized(true);
+        }
+      } catch {
+        router.replace("/");
+      }
+    }
+
+    void verifyAccess();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user, apiFetch, router]);
+
+  if (loading || !authorized || !user) {
+    return <PageSpinner />;
   }
 
   return (
