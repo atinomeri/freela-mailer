@@ -50,7 +50,6 @@ jobs:
             git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
           fi
 
-          git config --global --add safe.directory "$VPS_APP_DIR"
           echo "==> Repo: $(pwd)"
           echo "==> Origin: $(git remote get-url origin)"
           echo "==> Git status before sync:"
