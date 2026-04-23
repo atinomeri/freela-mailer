@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Eye, Redo2, Save, Undo2 } from "lucide-react";
+import { ArrowLeft, Eye, ImageUp, Redo2, Save, Undo2 } from "lucide-react";
 import { MailerLoginPage } from "../../login-page";
 import { useMailerAuth } from "@/lib/mailer-auth";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,34 @@ type GrapesEditor = {
   getHtml: () => string;
   runCommand: (name: string) => unknown;
   on: (event: string, callback: (component?: unknown) => void) => void;
+  off: (event: string, callback: (component?: unknown) => void) => void;
   getSelected: () => { getName?: () => string; get?: (key: string) => unknown } | null;
+  AssetManager: {
+    add: (asset: { src: string; type?: string; name?: string }) => void;
+    getAll: () => Array<{ get: (key: string) => unknown }>;
+  };
+  DomComponents: {
+    getType: (name: string) => {
+      model?: {
+        prototype?: {
+          defaults?: {
+            traits?: unknown[];
+          };
+        };
+      };
+    } | undefined;
+    addType: (
+      name: string,
+      definition: {
+        model: {
+          extend: unknown;
+          defaults: {
+            traits: unknown[];
+          };
+        };
+      },
+    ) => void;
+  };
   BlockManager: {
     add: (
       id: string,
@@ -32,9 +59,23 @@ type GrapesEditor = {
   };
 };
 
+type SelectedComponent = {
+  getName?: () => string;
+  get?: (key: string) => unknown;
+  getAttributes?: () => Record<string, string>;
+  addAttributes?: (attrs: Record<string, string>) => void;
+};
+
 interface EditorExportPayload {
   mjml?: string;
   html?: string;
+}
+
+interface UploadedAsset {
+  url: string;
+  name: string;
+  size?: number;
+  type?: string;
 }
 
 const DEFAULT_MJML_TEMPLATE = `<mjml>
@@ -196,16 +237,50 @@ function registerStarterBlocks(editor: GrapesEditor) {
   });
 }
 
+function getSelectedComponentLabel(component: SelectedComponent | null): string {
+  if (!component) return "No block selected";
+  const explicitName = component.getName?.();
+  const fallbackType = component.get?.("type");
+  return explicitName || (typeof fallbackType === "string" ? fallbackType : "block");
+}
+
+function isImageComponent(component: SelectedComponent | null): boolean {
+  if (!component) return false;
+  const type = component.get?.("type");
+  const name = component.getName?.();
+  return (
+    (typeof type === "string" && type.toLowerCase().includes("image")) ||
+    (typeof name === "string" && name.toLowerCase().includes("image"))
+  );
+}
+
+async function fetchEditorAssets(
+  apiFetch: ReturnType<typeof useMailerAuth>["apiFetch"],
+): Promise<UploadedAsset[]> {
+  const res = await apiFetch("/api/desktop/editor-assets?limit=100");
+  if (!res.ok) return [];
+  const body = await res.json().catch(() => null) as { ok?: boolean; data?: UploadedAsset[] } | null;
+  if (!body?.ok || !Array.isArray(body.data)) return [];
+  return body.data.filter((item) => typeof item.url === "string");
+}
+
 export default function MailerTemplateEditorPage() {
   const { user, apiFetch } = useMailerAuth();
   const mountRef = useRef<HTMLDivElement | null>(null);
   const blocksRef = useRef<HTMLDivElement | null>(null);
   const traitsRef = useRef<HTMLDivElement | null>(null);
   const stylesRef = useRef<HTMLDivElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const editorRef = useRef<GrapesEditor | null>(null);
+  const selectedRef = useRef<SelectedComponent | null>(null);
 
   const [initializing, setInitializing] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageAlt, setImageAlt] = useState("");
+  const [imageLink, setImageLink] = useState("");
+  const [isImageSelected, setIsImageSelected] = useState(false);
   const [selectedBlockLabel, setSelectedBlockLabel] = useState("No block selected");
   const [name, setName] = useState("Untitled MJML Template");
   const [subject, setSubject] = useState("");
@@ -226,6 +301,8 @@ export default function MailerTemplateEditorPage() {
           import("grapesjs-mjml"),
         ]);
 
+        if (cancelled || !mountRef.current) return;
+        const existingAssets = await fetchEditorAssets(apiFetch);
         if (cancelled || !mountRef.current) return;
 
         const editor = grapesjs.init({
@@ -271,21 +348,99 @@ export default function MailerTemplateEditorPage() {
               useXmlParser: true,
             },
           },
+          assetManager: {
+            assets: existingAssets.map((item) => ({
+              src: item.url,
+              type: "image",
+              name: item.name,
+            })),
+            upload: false,
+            uploadName: "files",
+            autoAdd: false,
+            uploadFile: async (event: Event) => {
+              const drag = event as DragEvent;
+              const target = event.target as HTMLInputElement | null;
+              const list = drag.dataTransfer?.files ?? target?.files;
+              if (!list || list.length === 0) return;
+
+              const formData = new FormData();
+              for (const file of Array.from(list)) {
+                formData.append("files", file);
+              }
+
+              const res = await apiFetch("/api/desktop/editor-assets", {
+                method: "POST",
+                body: formData,
+              });
+              const body = await res.json().catch(() => null) as {
+                ok?: boolean;
+                data?: UploadedAsset[];
+                error?: { message?: string };
+              } | null;
+              if (!res.ok || !body?.ok || !Array.isArray(body.data)) {
+                throw new Error(body?.error?.message || "Image upload failed");
+              }
+
+              for (const asset of body.data) {
+                editor.AssetManager.add({
+                  src: asset.url,
+                  type: "image",
+                  name: asset.name,
+                });
+              }
+            },
+          },
           components: DEFAULT_MJML_TEMPLATE,
         }) as unknown as GrapesEditor;
 
+        const imageType = editor.DomComponents.getType("image");
+        const imageModel = imageType?.model;
+        if (imageModel) {
+          const baseTraits = Array.isArray(imageModel.prototype?.defaults?.traits)
+            ? imageModel.prototype?.defaults?.traits
+            : [];
+          editor.DomComponents.addType("image", {
+            model: {
+              extend: imageModel,
+              defaults: {
+                traits: [
+                  ...baseTraits,
+                  { type: "text", label: "Link URL", name: "href" },
+                ],
+              },
+            },
+          });
+        }
+
+        function syncSelectedComponent(component: SelectedComponent | null) {
+          selectedRef.current = component;
+          setSelectedBlockLabel(getSelectedComponentLabel(component));
+          const imageSelected = isImageComponent(component);
+          setIsImageSelected(imageSelected);
+
+          if (!imageSelected || !component) {
+            setImageUrl("");
+            setImageAlt("");
+            setImageLink("");
+            return;
+          }
+
+          const attrs = component.getAttributes?.() || {};
+          setImageUrl(attrs.src ?? "");
+          setImageAlt(attrs.alt ?? "");
+          setImageLink(attrs.href ?? "");
+        }
+
         registerStarterBlocks(editor);
-        editor.on("component:selected", (component) => {
-          const selected = (component as { getName?: () => string; get?: (key: string) => unknown } | undefined)
-            ?? editor.getSelected();
-          const explicitName = selected?.getName?.();
-          const fallbackType = selected?.get?.("type");
-          const label = explicitName || (typeof fallbackType === "string" ? fallbackType : "block");
-          setSelectedBlockLabel(label);
-        });
-        editor.on("component:deselected", () => {
-          setSelectedBlockLabel("No block selected");
-        });
+        const onSelected = (component?: unknown) => {
+          const selected = (component as SelectedComponent | undefined) ?? (editor.getSelected() as SelectedComponent | null);
+          syncSelectedComponent(selected);
+        };
+        const onDeselected = () => syncSelectedComponent(null);
+
+        editor.on("component:selected", onSelected);
+        editor.on("component:update", onSelected);
+        editor.on("component:deselected", onDeselected);
         editorRef.current = editor;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to initialize editor");
@@ -300,14 +455,75 @@ export default function MailerTemplateEditorPage() {
       cancelled = true;
       editorRef.current?.destroy();
       editorRef.current = null;
+      selectedRef.current = null;
     };
-  }, [user]);
+  }, [apiFetch, user]);
 
   if (!user) return <MailerLoginPage />;
 
   function runEditorCommand(name: string) {
     if (!editorRef.current) return;
     editorRef.current.runCommand(name);
+  }
+
+  function updateSelectedImageAttributes(next: Partial<Record<"src" | "alt" | "href", string>>) {
+    const selected = selectedRef.current;
+    if (!selected || !selected.addAttributes || !isImageComponent(selected)) return;
+    const attrs = selected.getAttributes?.() || {};
+    selected.addAttributes({ ...attrs, ...next });
+  }
+
+  async function uploadImages(files: FileList | File[]): Promise<UploadedAsset[]> {
+    const formData = new FormData();
+    for (const file of Array.from(files)) {
+      formData.append("files", file);
+    }
+
+    const res = await apiFetch("/api/desktop/editor-assets", {
+      method: "POST",
+      body: formData,
+    });
+
+    const body = await res.json().catch(() => null) as {
+      ok?: boolean;
+      data?: UploadedAsset[];
+      error?: { message?: string };
+    } | null;
+    if (!res.ok || !body?.ok || !Array.isArray(body.data)) {
+      throw new Error(body?.error?.message || "Image upload failed");
+    }
+    return body.data;
+  }
+
+  async function handleImageUploadFromInput(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setImageUploading(true);
+    setError("");
+
+    try {
+      const uploaded = await uploadImages(files);
+      const editor = editorRef.current;
+      if (!editor || uploaded.length === 0) return;
+
+      for (const asset of uploaded) {
+        editor.AssetManager.add({
+          src: asset.url,
+          type: "image",
+          name: asset.name,
+        });
+      }
+
+      const first = uploaded[0];
+      setImageUrl(first.url);
+      updateSelectedImageAttributes({ src: first.url });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image upload failed");
+    } finally {
+      setImageUploading(false);
+      event.target.value = "";
+    }
   }
 
   async function handleSave() {
@@ -461,6 +677,70 @@ export default function MailerTemplateEditorPage() {
               <p className="text-sm font-medium">Block settings</p>
               <p className="text-xs text-muted-foreground">Edit selected block content and style.</p>
             </div>
+            {isImageSelected ? (
+              <div className="space-y-2 border-b border-border p-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Image</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7"
+                    loading={imageUploading}
+                    onClick={() => imageInputRef.current?.click()}
+                  >
+                    <ImageUp className="h-3.5 w-3.5" />
+                    Upload
+                  </Button>
+                </div>
+                <label className="grid gap-1 text-xs text-muted-foreground">
+                  <span>Image URL</span>
+                  <Input
+                    value={imageUrl}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setImageUrl(value);
+                      updateSelectedImageAttributes({ src: value });
+                    }}
+                    placeholder="https://..."
+                    className="h-8 text-xs"
+                  />
+                </label>
+                <label className="grid gap-1 text-xs text-muted-foreground">
+                  <span>Alt text</span>
+                  <Input
+                    value={imageAlt}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setImageAlt(value);
+                      updateSelectedImageAttributes({ alt: value });
+                    }}
+                    placeholder="Describe image"
+                    className="h-8 text-xs"
+                  />
+                </label>
+                <label className="grid gap-1 text-xs text-muted-foreground">
+                  <span>Link URL</span>
+                  <Input
+                    value={imageLink}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setImageLink(value);
+                      updateSelectedImageAttributes({ href: value });
+                    }}
+                    placeholder="https://example.com"
+                    className="h-8 text-xs"
+                  />
+                </label>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml"
+                  className="hidden"
+                  onChange={(event) => void handleImageUploadFromInput(event)}
+                />
+              </div>
+            ) : null}
             <div className="h-[240px] overflow-y-auto border-b border-border p-2 md:h-[calc((72vh-56px)/2)]">
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Content</p>
               <div ref={traitsRef} />
