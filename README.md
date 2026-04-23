@@ -35,8 +35,10 @@ freela-mailer/
 │   ├── rotate-smtp-crypto.mjs  One-off SMTP re-encrypt migration
 │   └── sql/             Phase-4 audit/scrub SQL
 ├── deploy/
-│   ├── docker-compose.yml  Standalone stack (app + worker + db + redis)
-│   └── Caddyfile           mailer.freela.ge vhost
+│   ├── docker-compose.yml  Standalone stack (caddy + app + worker + db + redis)
+│   ├── deploy.sh           One-command production deploy (build + migrate + health)
+│   ├── Caddyfile           mailer.freela.ge vhost
+│   └── Caddy.Dockerfile    Bakes Caddyfile into image
 └── Dockerfile
 ```
 
@@ -98,5 +100,24 @@ git clone git@github.com:atinomeri/freela-mailer.git /root/freela-mailer
 cd /root/freela-mailer/deploy
 cp ../.env.example .env
 # fill real values in .env
-docker compose -p freela-mailer -f docker-compose.yml up -d --build
+chmod +x deploy.sh
+./deploy.sh
+```
+
+## Production deploy checklist
+
+Before first deploy on a new host:
+
+1. Point `mailer.freela.ge` A record to the server public IP.
+2. Open inbound `80/tcp` and `443/tcp`.
+3. Ensure `deploy/.env` has non-empty secrets and matching DB credentials:
+   `DATABASE_URL` password must equal `POSTGRES_PASSWORD`.
+
+For every deploy:
+
+```sh
+cd /root/freela-mailer
+git pull --ff-only
+cd deploy
+./deploy.sh
 ```

@@ -67,23 +67,8 @@ jobs:
           fi
 
           cd deploy
-          COMPOSE="docker compose -p freela-mailer -f docker-compose.yml"
-
-          echo "==> Building mailer images..."
-          $COMPOSE build app worker
-
-          echo "==> Rolling update (app + worker)..."
-          if ! $COMPOSE up -d --no-deps --wait --wait-timeout 500 app worker; then
-            echo "::error::docker compose up failed"
-            $COMPOSE logs --tail=150 app worker
-            exit 1
-          fi
-
-          echo "==> Running Prisma migrate deploy..."
-          $COMPOSE exec -T app npm run prisma:migrate:deploy
-
-          echo "==> Service status"
-          $COMPOSE ps
+          chmod +x deploy.sh
+          ./deploy.sh --ci
 
       - name: Health check
         if: env.HEALTHCHECK_URL != ''
