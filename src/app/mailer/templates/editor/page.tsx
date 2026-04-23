@@ -14,6 +14,20 @@ type GrapesEditor = {
   getProjectData: () => unknown;
   getHtml: () => string;
   runCommand: (name: string) => unknown;
+  BlockManager: {
+    add: (
+      id: string,
+      options: {
+        label: string;
+        category: string;
+        content: string;
+      },
+    ) => void;
+    getAll: () => { reset: () => void };
+    getCategories: () => {
+      each: (callback: (category: { set: (key: string, value: boolean) => void }) => void) => void;
+    };
+  };
 };
 
 interface EditorExportPayload {
@@ -36,6 +50,124 @@ const DEFAULT_MJML_TEMPLATE = `<mjml>
   </mj-body>
 </mjml>`;
 
+const STARTER_BLOCKS: Array<{
+  id: string;
+  label: string;
+  category: string;
+  content: string;
+}> = [
+  {
+    id: "starter-text",
+    label: "Text",
+    category: "Content",
+    content: `<mj-section padding="16px 20px">
+  <mj-column>
+    <mj-text font-size="16px" color="#111827" font-family="Arial, sans-serif">
+      Write your message here.
+    </mj-text>
+  </mj-column>
+</mj-section>`,
+  },
+  {
+    id: "starter-image",
+    label: "Image",
+    category: "Content",
+    content: `<mj-section padding="16px 20px">
+  <mj-column>
+    <mj-image src="https://via.placeholder.com/600x240?text=Your+Image" alt="Image" />
+  </mj-column>
+</mj-section>`,
+  },
+  {
+    id: "starter-button",
+    label: "Button",
+    category: "Content",
+    content: `<mj-section padding="16px 20px">
+  <mj-column>
+    <mj-button background-color="#2563eb" color="#ffffff" border-radius="8px" font-size="15px">
+      Call to action
+    </mj-button>
+  </mj-column>
+</mj-section>`,
+  },
+  {
+    id: "starter-divider",
+    label: "Divider",
+    category: "Content",
+    content: `<mj-section padding="8px 20px">
+  <mj-column>
+    <mj-divider border-color="#e5e7eb" border-width="1px" />
+  </mj-column>
+</mj-section>`,
+  },
+  {
+    id: "starter-spacer",
+    label: "Spacer",
+    category: "Content",
+    content: `<mj-section padding="0 20px">
+  <mj-column>
+    <mj-spacer height="24px" />
+  </mj-column>
+</mj-section>`,
+  },
+  {
+    id: "starter-columns-2",
+    label: "2 Columns",
+    category: "Layout",
+    content: `<mj-section padding="16px 20px">
+  <mj-column width="50%">
+    <mj-text font-size="15px" color="#111827">Column 1</mj-text>
+  </mj-column>
+  <mj-column width="50%">
+    <mj-text font-size="15px" color="#111827">Column 2</mj-text>
+  </mj-column>
+</mj-section>`,
+  },
+  {
+    id: "starter-columns-3",
+    label: "3 Columns",
+    category: "Layout",
+    content: `<mj-section padding="16px 20px">
+  <mj-column width="33.33%">
+    <mj-text font-size="14px" color="#111827">Column 1</mj-text>
+  </mj-column>
+  <mj-column width="33.33%">
+    <mj-text font-size="14px" color="#111827">Column 2</mj-text>
+  </mj-column>
+  <mj-column width="33.33%">
+    <mj-text font-size="14px" color="#111827">Column 3</mj-text>
+  </mj-column>
+</mj-section>`,
+  },
+  {
+    id: "starter-header",
+    label: "Header",
+    category: "Sections",
+    content: `<mj-section background-color="#111827" padding="20px">
+  <mj-column>
+    <mj-text align="center" font-size="20px" font-weight="700" color="#ffffff">
+      Your brand name
+    </mj-text>
+  </mj-column>
+</mj-section>`,
+  },
+  {
+    id: "starter-footer",
+    label: "Footer",
+    category: "Sections",
+    content: `<mj-section background-color="#f9fafb" padding="20px">
+  <mj-column>
+    <mj-text align="center" font-size="12px" color="#6b7280">
+      You are receiving this email because you subscribed.
+    </mj-text>
+    <mj-text align="center" font-size="12px" color="#6b7280">
+      Unsubscribe | Update preferences
+    </mj-text>
+  </mj-column>
+</mj-section>`,
+  },
+];
+
 function parseEditorExport(value: unknown): EditorExportPayload {
   if (!value || typeof value !== "object") return {};
   const source = value as Record<string, unknown>;
@@ -45,9 +177,27 @@ function parseEditorExport(value: unknown): EditorExportPayload {
   };
 }
 
+function registerStarterBlocks(editor: GrapesEditor) {
+  const blockManager = editor.BlockManager;
+  blockManager.getAll().reset();
+
+  for (const block of STARTER_BLOCKS) {
+    blockManager.add(block.id, {
+      label: block.label,
+      category: block.category,
+      content: block.content,
+    });
+  }
+
+  blockManager.getCategories().each((category) => {
+    category.set("open", true);
+  });
+}
+
 export default function MailerTemplateEditorPage() {
   const { user, apiFetch } = useMailerAuth();
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const blocksRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<GrapesEditor | null>(null);
 
   const [initializing, setInitializing] = useState(true);
@@ -62,7 +212,7 @@ export default function MailerTemplateEditorPage() {
     let cancelled = false;
 
     async function initEditor() {
-      if (!user || !mountRef.current) return;
+      if (!user || !mountRef.current || !blocksRef.current) return;
       setInitializing(true);
 
       try {
@@ -76,8 +226,11 @@ export default function MailerTemplateEditorPage() {
         const editor = grapesjs.init({
           container: mountRef.current,
           fromElement: false,
-          height: "70vh",
+          height: "100%",
           storageManager: false,
+          blockManager: {
+            appendTo: blocksRef.current,
+          },
           plugins: [grapesjsMjml],
           pluginsOpts: {
             "grapesjs-mjml": {
@@ -87,6 +240,7 @@ export default function MailerTemplateEditorPage() {
           components: DEFAULT_MJML_TEMPLATE,
         }) as unknown as GrapesEditor;
 
+        registerStarterBlocks(editor);
         editorRef.current = editor;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to initialize editor");
@@ -159,7 +313,7 @@ export default function MailerTemplateEditorPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Template Editor (MJML)</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Phase 1: create and save GrapesJS project JSON, MJML source, and rendered HTML.
+            Phase 2 basics: edit with starter MJML blocks and save project JSON, MJML source, and rendered HTML.
           </p>
         </div>
         <Button asChild variant="outline">
@@ -199,15 +353,53 @@ export default function MailerTemplateEditorPage() {
         ) : null}
       </Card>
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="relative overflow-hidden p-0">
+        <div className="mjml-editor-shell grid h-[72vh] grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="border-b border-border bg-muted/20 md:border-b-0 md:border-r">
+            <div className="border-b border-border px-3 py-2">
+              <p className="text-sm font-medium">Starter blocks</p>
+              <p className="text-xs text-muted-foreground">Drag into the canvas to build your email.</p>
+            </div>
+            <div ref={blocksRef} className="h-[220px] overflow-y-auto p-2 md:h-[calc(72vh-56px)]" />
+          </aside>
+          <div ref={mountRef} className="h-[72vh] min-w-0" />
+        </div>
         {initializing ? (
-          <div className="flex h-[70vh] items-center justify-center text-sm text-muted-foreground">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 text-sm text-muted-foreground">
             Loading editor...
           </div>
-        ) : (
-          <div ref={mountRef} className="h-[70vh]" />
-        )}
+        ) : null}
       </Card>
+      <style jsx global>{`
+        .mjml-editor-shell .gjs-blocks-c {
+          display: grid;
+          gap: 8px;
+        }
+        .mjml-editor-shell .gjs-block {
+          width: 100%;
+          min-height: auto;
+          margin: 0;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          background: #ffffff;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+        }
+        .mjml-editor-shell .gjs-block:hover {
+          border-color: #93c5fd;
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+        }
+        .mjml-editor-shell .gjs-block-label {
+          font-size: 13px;
+          padding: 10px 8px;
+          color: #111827;
+        }
+        .mjml-editor-shell .gjs-sm-sector-title,
+        .mjml-editor-shell .gjs-title {
+          font-size: 12px;
+          letter-spacing: 0.02em;
+          text-transform: uppercase;
+        }
+      `}</style>
     </div>
   );
 }
