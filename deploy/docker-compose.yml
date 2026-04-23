@@ -6,6 +6,26 @@
 # mailer.freela.ge vhost.
 
 services:
+  caddy:
+    build:
+      context: .
+      dockerfile: Caddy.Dockerfile
+    container_name: mailer-caddy
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:-mailer.freela.ge}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - mailer_net
+
   app:
     build:
       context: ..
@@ -113,6 +133,8 @@ volumes:
   mailer_pg_data:
   mailer_redis_data:
   mailer_exports:
+  caddy_data:
+  caddy_config:
 
 networks:
   mailer_net:
