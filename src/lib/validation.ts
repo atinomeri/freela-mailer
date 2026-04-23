@@ -446,6 +446,15 @@ export const listCampaignTemplatesSchema = z.object({
   category: z.string().min(1).max(100).optional(),
 });
 
+export const saveMailerEditorTemplateSchema = z.object({
+  id: z.string().cuid().optional(),
+  name: z.string().min(1, "Template name is required").max(200),
+  subject: z.string().max(998).nullable().optional(),
+  editorProjectJson: z.unknown(),
+  mjmlSource: z.string().min(1, "MJML source is required"),
+  htmlOutput: z.string().min(1, "Rendered HTML is required"),
+});
+
 // ============================================
 // Desktop SMTP config schemas
 // ============================================

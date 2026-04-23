@@ -152,6 +152,7 @@ model DesktopUser {
   smtpPoolAccounts  DesktopSmtpPoolAccount[]
   sendingAccounts   DesktopSendingAccount[]
   campaignTemplates CampaignTemplate[]
+  editorTemplates   MailerEditorTemplate[]
   warmupSenders     DesktopWarmupSender[]
   reportExports     ReportExportJob[]
 
@@ -338,6 +339,23 @@ model CampaignTemplate {
 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  @@index([desktopUserId, createdAt])
+}
+
+model MailerEditorTemplate {
+  id                String      @id @default(cuid())
+  desktopUserId     String
+  desktopUser       DesktopUser @relation(fields: [desktopUserId], references: [id], onDelete: Cascade)
+
+  name              String
+  subject           String?
+  editorProjectJson Json
+  mjmlSource        String      @db.Text
+  htmlOutput        String      @db.Text
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
   @@index([desktopUserId, createdAt])
 }

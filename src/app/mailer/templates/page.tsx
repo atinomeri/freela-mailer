@@ -12,6 +12,7 @@ import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { MailerLoginPage } from "../login-page";
 import { FileText, Pencil, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 interface TemplateItem {
   id: string;
@@ -157,10 +158,15 @@ export default function MailerTemplatesPage() {
             Reusable campaign templates (built-in and custom). Only custom templates can be edited or removed.
           </p>
         </div>
-        <Button size="sm" onClick={openCreateModal}>
-          <Plus className="h-4 w-4" />
-          New Template
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href="/templates/editor">Open MJML Editor</Link>
+          </Button>
+          <Button size="sm" onClick={openCreateModal}>
+            <Plus className="h-4 w-4" />
+            New Template
+          </Button>
+        </div>
       </div>
 
       {error && (
