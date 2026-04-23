@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Eye, Redo2, Save, Undo2 } from "lucide-react";
 import { MailerLoginPage } from "../../login-page";
 import { useMailerAuth } from "@/lib/mailer-auth";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ type GrapesEditor = {
   getProjectData: () => unknown;
   getHtml: () => string;
   runCommand: (name: string) => unknown;
+  on: (event: string, callback: (component?: unknown) => void) => void;
+  getSelected: () => { getName?: () => string; get?: (key: string) => unknown } | null;
   BlockManager: {
     add: (
       id: string,
@@ -198,10 +200,13 @@ export default function MailerTemplateEditorPage() {
   const { user, apiFetch } = useMailerAuth();
   const mountRef = useRef<HTMLDivElement | null>(null);
   const blocksRef = useRef<HTMLDivElement | null>(null);
+  const traitsRef = useRef<HTMLDivElement | null>(null);
+  const stylesRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<GrapesEditor | null>(null);
 
   const [initializing, setInitializing] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [selectedBlockLabel, setSelectedBlockLabel] = useState("No block selected");
   const [name, setName] = useState("Untitled MJML Template");
   const [subject, setSubject] = useState("");
   const [templateId, setTemplateId] = useState<string | null>(null);
@@ -212,7 +217,7 @@ export default function MailerTemplateEditorPage() {
     let cancelled = false;
 
     async function initEditor() {
-      if (!user || !mountRef.current || !blocksRef.current) return;
+      if (!user || !mountRef.current || !blocksRef.current || !traitsRef.current || !stylesRef.current) return;
       setInitializing(true);
 
       try {
@@ -228,8 +233,37 @@ export default function MailerTemplateEditorPage() {
           fromElement: false,
           height: "100%",
           storageManager: false,
+          panels: { defaults: [] },
           blockManager: {
             appendTo: blocksRef.current,
+          },
+          traitManager: {
+            appendTo: traitsRef.current,
+          },
+          styleManager: {
+            appendTo: stylesRef.current,
+            sectors: [
+              {
+                name: "Typography",
+                open: true,
+                buildProps: ["font-family", "font-size", "font-weight", "line-height", "text-align", "color"],
+              },
+              {
+                name: "Spacing",
+                open: true,
+                buildProps: ["padding", "margin"],
+              },
+              {
+                name: "Dimension",
+                open: false,
+                buildProps: ["width", "height"],
+              },
+              {
+                name: "Decorations",
+                open: false,
+                buildProps: ["background-color", "border", "border-radius"],
+              },
+            ],
           },
           plugins: [grapesjsMjml],
           pluginsOpts: {
@@ -241,6 +275,17 @@ export default function MailerTemplateEditorPage() {
         }) as unknown as GrapesEditor;
 
         registerStarterBlocks(editor);
+        editor.on("component:selected", (component) => {
+          const selected = (component as { getName?: () => string; get?: (key: string) => unknown } | undefined)
+            ?? editor.getSelected();
+          const explicitName = selected?.getName?.();
+          const fallbackType = selected?.get?.("type");
+          const label = explicitName || (typeof fallbackType === "string" ? fallbackType : "block");
+          setSelectedBlockLabel(label);
+        });
+        editor.on("component:deselected", () => {
+          setSelectedBlockLabel("No block selected");
+        });
         editorRef.current = editor;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to initialize editor");
@@ -259,6 +304,11 @@ export default function MailerTemplateEditorPage() {
   }, [user]);
 
   if (!user) return <MailerLoginPage />;
+
+  function runEditorCommand(name: string) {
+    if (!editorRef.current) return;
+    editorRef.current.runCommand(name);
+  }
 
   async function handleSave() {
     if (!editorRef.current) return;
@@ -354,15 +404,72 @@ export default function MailerTemplateEditorPage() {
       </Card>
 
       <Card className="relative overflow-hidden p-0">
-        <div className="mjml-editor-shell grid h-[72vh] grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="grid border-b border-border bg-muted/20 px-3 py-2 md:grid-cols-[240px_minmax(0,1fr)_300px] md:items-center md:gap-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Starter blocks</p>
+          <div className="flex flex-wrap items-center justify-start gap-2 py-2 md:justify-center md:py-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => runEditorCommand("core:undo")}
+              disabled={initializing}
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+              Undo
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => runEditorCommand("core:redo")}
+              disabled={initializing}
+            >
+              <Redo2 className="h-3.5 w-3.5" />
+              Redo
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => runEditorCommand("preview")}
+              disabled={initializing}
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Preview
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground md:text-right">
+            Selected: <span className="font-medium text-foreground">{selectedBlockLabel}</span>
+          </p>
+        </div>
+        <div className="mjml-editor-shell grid h-[72vh] grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)_300px]">
           <aside className="border-b border-border bg-muted/20 md:border-b-0 md:border-r">
             <div className="border-b border-border px-3 py-2">
-              <p className="text-sm font-medium">Starter blocks</p>
-              <p className="text-xs text-muted-foreground">Drag into the canvas to build your email.</p>
+              <p className="text-sm font-medium">Blocks</p>
+              <p className="text-xs text-muted-foreground">Drag and drop into the canvas.</p>
             </div>
             <div ref={blocksRef} className="h-[220px] overflow-y-auto p-2 md:h-[calc(72vh-56px)]" />
           </aside>
-          <div ref={mountRef} className="h-[72vh] min-w-0" />
+          <div className="relative h-[72vh] min-w-0 bg-slate-100/70">
+            <div ref={mountRef} className="h-[72vh] min-w-0" />
+          </div>
+          <aside className="border-t border-border bg-muted/20 md:border-l md:border-t-0">
+            <div className="border-b border-border px-3 py-2">
+              <p className="text-sm font-medium">Block settings</p>
+              <p className="text-xs text-muted-foreground">Edit selected block content and style.</p>
+            </div>
+            <div className="h-[240px] overflow-y-auto border-b border-border p-2 md:h-[calc((72vh-56px)/2)]">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Content</p>
+              <div ref={traitsRef} />
+            </div>
+            <div className="h-[240px] overflow-y-auto p-2 md:h-[calc((72vh-56px)/2)]">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Style</p>
+              <div ref={stylesRef} />
+            </div>
+          </aside>
         </div>
         {initializing ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 text-sm text-muted-foreground">
@@ -374,6 +481,18 @@ export default function MailerTemplateEditorPage() {
         .mjml-editor-shell .gjs-blocks-c {
           display: grid;
           gap: 8px;
+        }
+        .mjml-editor-shell .gjs-pn-panels {
+          display: none;
+        }
+        .mjml-editor-shell .gjs-cv-canvas {
+          width: 100%;
+          height: 100%;
+          top: 0;
+        }
+        .mjml-editor-shell .gjs-editor,
+        .mjml-editor-shell .gjs-cv-canvas {
+          background: transparent;
         }
         .mjml-editor-shell .gjs-block {
           width: 100%;
@@ -392,6 +511,59 @@ export default function MailerTemplateEditorPage() {
           font-size: 13px;
           padding: 10px 8px;
           color: #111827;
+        }
+        .mjml-editor-shell .gjs-block-category {
+          border: 0;
+          background: transparent;
+          margin: 2px 0 0;
+        }
+        .mjml-editor-shell .gjs-title {
+          border: 0;
+          background: transparent;
+          padding: 6px 4px;
+          color: #6b7280;
+        }
+        .mjml-editor-shell .gjs-sm-sectors,
+        .mjml-editor-shell .gjs-trt-traits {
+          border: 0;
+          background: transparent;
+        }
+        .mjml-editor-shell .gjs-trt-trait,
+        .mjml-editor-shell .gjs-sm-sector {
+          margin-bottom: 8px;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          background: #ffffff;
+          padding: 8px;
+        }
+        .mjml-editor-shell .gjs-sm-properties {
+          padding: 6px 0 0;
+        }
+        .mjml-editor-shell .gjs-sm-label {
+          color: #6b7280;
+          font-size: 12px;
+          min-width: 90px;
+        }
+        .mjml-editor-shell .gjs-field,
+        .mjml-editor-shell .gjs-clm-tags {
+          border-radius: 8px;
+          border: 1px solid #d1d5db;
+          background: #ffffff;
+        }
+        .mjml-editor-shell .gjs-trt-trait .gjs-field {
+          background: #ffffff;
+          color: #111827;
+        }
+        .mjml-editor-shell .gjs-one-bg,
+        .mjml-editor-shell .gjs-two-color,
+        .mjml-editor-shell .gjs-three-bg {
+          background: transparent;
+          color: inherit;
+        }
+        .mjml-editor-shell .gjs-four-color,
+        .mjml-editor-shell .gjs-color-warn,
+        .mjml-editor-shell .gjs-color-highlight {
+          color: inherit;
         }
         .mjml-editor-shell .gjs-sm-sector-title,
         .mjml-editor-shell .gjs-title {
