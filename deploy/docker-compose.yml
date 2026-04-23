@@ -11,6 +11,7 @@ services:
       context: .
       dockerfile: Caddy.Dockerfile
     container_name: mailer-caddy
+    profiles: ["edge"]
     restart: unless-stopped
     depends_on:
       app:

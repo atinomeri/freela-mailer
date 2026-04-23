@@ -10,6 +10,16 @@ if [[ "${1:-}" == "--ci" ]]; then
 fi
 
 COMPOSE=(docker compose -p freela-mailer -f docker-compose.yml)
+ENABLE_EDGE_CADDY="${ENABLE_EDGE_CADDY:-false}"
+if [[ -f .env ]]; then
+  ENV_EDGE_FLAG="$(awk -F= '$1=="ENABLE_EDGE_CADDY" {print $2; exit}' .env | tr -d '\r' | tr '[:upper:]' '[:lower:]')"
+  if [[ -n "${ENV_EDGE_FLAG:-}" ]]; then
+    ENABLE_EDGE_CADDY="$ENV_EDGE_FLAG"
+  fi
+fi
+if [[ "$ENABLE_EDGE_CADDY" == "true" ]]; then
+  COMPOSE+=(--profile edge)
+fi
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -62,6 +72,9 @@ require_env JWT_REFRESH_SECRET
 require_env UNSUBSCRIBE_TOKEN_SECRET
 require_env INTERNAL_API_SECRET
 require_env SMTP_CONFIG_SECRET
+if [[ "$ENABLE_EDGE_CADDY" == "true" ]]; then
+  require_env DOMAIN
+fi
 
 DB_URL="$(get_env_value DATABASE_URL)"
 DB_PASS="$(get_env_value POSTGRES_PASSWORD)"
@@ -70,8 +83,17 @@ if [[ "$DB_URL" != *":${DB_PASS}@"* ]]; then
   exit 1
 fi
 
-echo "==> Build images (app, worker, caddy)"
-"${COMPOSE[@]}" build app worker caddy
+BUILD_SERVICES=(app worker)
+APP_SERVICES=(app worker)
+LOG_SERVICES=(app worker db redis)
+if [[ "$ENABLE_EDGE_CADDY" == "true" ]]; then
+  BUILD_SERVICES+=(caddy)
+  APP_SERVICES+=(caddy)
+  LOG_SERVICES+=(caddy)
+fi
+
+echo "==> Build images (${BUILD_SERVICES[*]})"
+"${COMPOSE[@]}" build "${BUILD_SERVICES[@]}"
 
 echo "==> Start dependencies (db, redis)"
 "${COMPOSE[@]}" up -d db redis
@@ -79,8 +101,8 @@ echo "==> Start dependencies (db, redis)"
 echo "==> Run prisma migrate deploy"
 "${COMPOSE[@]}" run --rm --no-deps app npm run -s prisma:migrate:deploy
 
-echo "==> Start application services (app, worker, caddy)"
-"${COMPOSE[@]}" up -d app worker caddy
+echo "==> Start application services (${APP_SERVICES[*]})"
+"${COMPOSE[@]}" up -d "${APP_SERVICES[@]}"
 
 echo "==> Wait for healthy services"
 for _ in $(seq 1 60); do
@@ -88,12 +110,18 @@ for _ in $(seq 1 60); do
   worker_state="$(container_state mailer-worker)"
   db_state="$(container_state mailer-db)"
   redis_state="$(container_state mailer-redis)"
-  caddy_state="$(container_state mailer-caddy)"
+  caddy_ok="true"
+  if [[ "$ENABLE_EDGE_CADDY" == "true" ]]; then
+    caddy_state="$(container_state mailer-caddy)"
+    if [[ "$caddy_state" != "running none" ]]; then
+      caddy_ok="false"
+    fi
+  fi
   if [[ "$app_state" == "running healthy" ]] && \
      [[ "$worker_state" == "running healthy" ]] && \
      [[ "$db_state" == "running healthy" ]] && \
      [[ "$redis_state" == "running healthy" ]] && \
-     [[ "$caddy_state" == "running none" ]]; then
+     [[ "$caddy_ok" == "true" ]]; then
     break
   fi
   sleep 3
@@ -107,7 +135,7 @@ if [[ "$(container_state mailer-app)" != "running healthy" ]] || \
    [[ "$(container_state mailer-db)" != "running healthy" ]] || \
    [[ "$(container_state mailer-redis)" != "running healthy" ]]; then
   echo "ERROR: not all services reached healthy state"
-  "${COMPOSE[@]}" logs --tail=120 app worker db redis caddy
+  "${COMPOSE[@]}" logs --tail=120 "${LOG_SERVICES[@]}"
   exit 1
 fi
 

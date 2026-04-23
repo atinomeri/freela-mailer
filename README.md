@@ -35,7 +35,7 @@ freela-mailer/
 │   ├── rotate-smtp-crypto.mjs  One-off SMTP re-encrypt migration
 │   └── sql/             Phase-4 audit/scrub SQL
 ├── deploy/
-│   ├── docker-compose.yml  Standalone stack (caddy + app + worker + db + redis)
+│   ├── docker-compose.yml  Standalone stack (app + worker + db + redis, optional caddy)
 │   ├── deploy.sh           One-command production deploy (build + migrate + health)
 │   ├── Caddyfile           mailer.freela.ge vhost
 │   └── Caddy.Dockerfile    Bakes Caddyfile into image
@@ -112,6 +112,8 @@ Before first deploy on a new host:
 2. Open inbound `80/tcp` and `443/tcp`.
 3. Ensure `deploy/.env` has non-empty secrets and matching DB credentials:
    `DATABASE_URL` password must equal `POSTGRES_PASSWORD`.
+4. Set `ENABLE_EDGE_CADDY=true` only if this stack must own ports `80/443`.
+   If another proxy already runs on the host, keep `ENABLE_EDGE_CADDY=false`.
 
 For every deploy:
 
