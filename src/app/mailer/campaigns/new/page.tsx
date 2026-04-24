@@ -155,7 +155,7 @@ export default function NewCampaignPage() {
 
   async function loadContactLists() {
     try {
-      const listsRes = await apiFetch("/api/desktop/contact-lists?page=1&limit=200");
+      const listsRes = await apiFetch("/api/desktop/contact-lists?page=1&limit=100");
       if (!listsRes.ok) return;
       const listsBody = await listsRes.json();
       setContactLists(listsBody.data ?? []);
@@ -170,7 +170,7 @@ export default function NewCampaignPage() {
       try {
         const [templatesRes, listsRes] = await Promise.all([
           apiFetch("/api/desktop/templates"),
-          apiFetch("/api/desktop/contact-lists?page=1&limit=200"),
+          apiFetch("/api/desktop/contact-lists?page=1&limit=100"),
         ]);
         if (templatesRes.ok) {
           const templatesBody = await templatesRes.json();

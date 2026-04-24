@@ -77,7 +77,7 @@ export default function MailerDashboard() {
           : null;
 
         const loadTotalContacts = async (): Promise<number> => {
-          const pageSize = 200;
+          const pageSize = 100;
           let page = 1;
           let pages = 1;
           let totalContacts = 0;
