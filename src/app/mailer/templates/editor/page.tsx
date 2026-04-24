@@ -13,7 +13,7 @@ type GrapesEditor = {
   destroy: () => void;
   getProjectData: () => unknown;
   getHtml: () => string;
-  runCommand: (name: string) => unknown;
+  runCommand: (name: string, options?: unknown) => unknown;
   on: (event: string, callback: (component?: unknown) => void) => void;
   off: (event: string, callback: (component?: unknown) => void) => void;
   getSelected: () => { getName?: () => string; get?: (key: string) => unknown } | null;
@@ -217,6 +217,33 @@ function parseEditorExport(value: unknown): EditorExportPayload {
   return {
     mjml: typeof source.mjml === "string" ? source.mjml : undefined,
     html: typeof source.html === "string" ? source.html : undefined,
+  };
+}
+
+function parseCommandString(value: unknown): string | undefined {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return undefined;
+
+  const source = value as Record<string, unknown>;
+  const candidates = ["mjml", "html", "code", "result"];
+  for (const key of candidates) {
+    const val = source[key];
+    if (typeof val === "string") return val;
+  }
+  return undefined;
+}
+
+function buildExportFromCommands(editor: GrapesEditor): EditorExportPayload {
+  const mjmlCommand = parseCommandString(editor.runCommand("mjml-code"));
+  const mjmlSource = mjmlCommand?.trim() || parseEditorExport(editor.runCommand("mjml-export")).mjml || editor.getHtml();
+
+  const htmlCommand = parseCommandString(editor.runCommand("mjml-code-to-html", { mjml: mjmlSource }));
+  const htmlFromExport = parseEditorExport(editor.runCommand("mjml-export")).html;
+  const htmlOutput = htmlCommand?.trim() || htmlFromExport?.trim();
+
+  return {
+    mjml: mjmlSource,
+    html: htmlOutput,
   };
 }
 
@@ -536,8 +563,7 @@ export default function MailerTemplateEditorPage() {
     try {
       const editor = editorRef.current;
       const editorProjectJson = editor.getProjectData();
-
-      const exported = parseEditorExport(editor.runCommand("mjml-export"));
+      const exported = buildExportFromCommands(editor);
       const mjmlSource = exported.mjml || editor.getHtml();
       const htmlOutput = exported.html;
       if (!htmlOutput?.trim()) {
@@ -582,13 +608,13 @@ export default function MailerTemplateEditorPage() {
 
     setError("");
     try {
-      const exported = parseEditorExport(editor.runCommand("mjml-export"));
+      const exported = buildExportFromCommands(editor);
       const previewHtml = exported.html?.trim();
       if (!previewHtml?.trim()) {
         throw new Error("Preview failed: generated HTML is empty");
       }
 
-      const previewWindow = window.open("", "_blank", "noopener,noreferrer");
+      const previewWindow = window.open("", "_blank");
       if (!previewWindow) {
         throw new Error("Preview blocked by browser popup settings");
       }
