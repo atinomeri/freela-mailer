@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, AlertTriangle, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { MailerLoginPage } from "../../login-page";
@@ -129,6 +129,7 @@ export default function NewCampaignPage() {
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sampleCreating, setSampleCreating] = useState(false);
 
   const [name, setName] = useState("");
   const [senderName, setSenderName] = useState("");
@@ -151,6 +152,17 @@ export default function NewCampaignPage() {
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("10:00");
   const [confirmReady, setConfirmReady] = useState(false);
+
+  async function loadContactLists() {
+    try {
+      const listsRes = await apiFetch("/api/desktop/contact-lists?page=1&limit=200");
+      if (!listsRes.ok) return;
+      const listsBody = await listsRes.json();
+      setContactLists(listsBody.data ?? []);
+    } catch {
+      // keep current state
+    }
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -184,6 +196,8 @@ export default function NewCampaignPage() {
     () => selectedLists.reduce((acc, list) => acc + Number(list.contactCount ?? 0), 0),
     [selectedLists],
   );
+  const hasAudienceLists = contactLists.some((list) => Number(list.contactCount ?? 0) > 0);
+  const isSampleSeedAllowed = process.env.NODE_ENV !== "production";
 
   const detailsValid = useMemo(
     () => name.trim().length > 0 && senderEmail.includes("@"),
@@ -294,6 +308,35 @@ export default function NewCampaignPage() {
     }
     const body = (await res.json()) as { data: { id: string } };
     return body.data.id;
+  }
+
+  async function handleCreateSampleList() {
+    setError("");
+    setSampleCreating(true);
+    try {
+      const res = await apiFetch("/api/desktop/contact-lists/sample", {
+        method: "POST",
+      });
+      const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
+      if (!res.ok) {
+        const apiError = body?.error;
+        const message =
+          typeof apiError === "string"
+            ? apiError
+            : typeof apiError?.message === "string"
+              ? apiError.message
+              : typeof body?.message === "string"
+                ? body.message
+                : "Failed to create sample contacts";
+        throw new Error(message);
+      }
+
+      await loadContactLists();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create sample contacts");
+    } finally {
+      setSampleCreating(false);
+    }
   }
 
   async function handleFinish() {
@@ -503,23 +546,47 @@ export default function NewCampaignPage() {
         {step === 2 && (
           <div className="grid gap-5">
             <h2 className="text-lg font-semibold">Step 2: Audience</h2>
-            {contactLists.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No contacts yet. Import your first list.
-              </p>
+            {!hasAudienceLists ? (
+              <div className="rounded-lg border border-dashed border-border/80 bg-muted/20 p-4">
+                <p className="text-sm font-medium">No contacts available for audience yet.</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Import contacts first, or create a small sample list for development testing.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <ButtonLink href="/contacts" variant="outline">
+                    Import contacts
+                  </ButtonLink>
+                  {isSampleSeedAllowed && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      loading={sampleCreating}
+                      onClick={() => void handleCreateSampleList()}
+                    >
+                      Create sample list (test data)
+                    </Button>
+                  )}
+                </div>
+              </div>
             ) : (
               <div className="space-y-2">
                 {contactLists.map((list) => {
                   const checked = selectedListIds.includes(list.id);
+                  const isValidList = Number(list.contactCount ?? 0) > 0;
                   return (
                     <label
                       key={list.id}
-                      className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+                      className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+                        isValidList
+                          ? "border-border"
+                          : "border-border/60 bg-muted/30"
+                      }`}
                     >
                       <span className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           checked={checked}
+                          disabled={!isValidList}
                           onChange={(e) => {
                             const isChecked = e.target.checked;
                             setSelectedListIds((prev) =>
@@ -532,7 +599,7 @@ export default function NewCampaignPage() {
                         <span className="font-medium">{list.name}</span>
                       </span>
                       <span className="text-muted-foreground">
-                        {list.contactCount} recipients
+                        {list.contactCount} recipients{!isValidList ? " (empty list)" : ""}
                       </span>
                     </label>
                   );
