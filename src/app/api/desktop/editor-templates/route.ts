@@ -3,6 +3,11 @@ import { requireDesktopAuth } from "@/lib/desktop-auth";
 import { saveMailerEditorTemplateSchema } from "@/lib/validation";
 import { created, errors, success } from "@/lib/api-response";
 
+function logDevError(scope: string, err: unknown) {
+  if (process.env.NODE_ENV !== "development") return;
+  console.error(scope, err);
+}
+
 export async function GET(req: Request) {
   try {
     const auth = await requireDesktopAuth(req);
@@ -29,7 +34,7 @@ export async function GET(req: Request) {
 
     return success(items);
   } catch (err) {
-    console.error("[Editor Templates List] Error:", err);
+    logDevError("[Editor Templates List] Error:", err);
     return errors.serverError();
   }
 }
@@ -56,9 +61,64 @@ export async function POST(req: Request) {
       if (!existing) return errors.notFound("Editor template");
       if (existing.desktopUserId !== auth.user.id) return errors.forbidden();
 
-      const updated = await prisma.mailerEditorTemplate.update({
-        where: { id: payload.id },
+      const updated = await prisma.$transaction(async (tx) => {
+        const editorTemplate = await tx.mailerEditorTemplate.update({
+          where: { id: payload.id },
+          data: {
+            name: payload.name,
+            subject: payload.subject ?? null,
+            editorProjectJson: payload.editorProjectJson,
+            mjmlSource: payload.mjmlSource,
+            htmlOutput: payload.htmlOutput,
+          },
+          select: {
+            id: true,
+            name: true,
+            subject: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+
+        const existingCampaignTemplate = await tx.campaignTemplate.findUnique({
+          where: { id: payload.id },
+          select: { desktopUserId: true },
+        });
+
+        if (!existingCampaignTemplate) {
+          await tx.campaignTemplate.create({
+            data: {
+              id: payload.id,
+              desktopUserId: auth.user.id,
+              name: payload.name,
+              category: "mjml-editor",
+              subject: payload.subject?.trim() || payload.name,
+              html: payload.htmlOutput,
+              description: "Created in MJML editor",
+            },
+          });
+        } else if (existingCampaignTemplate.desktopUserId === auth.user.id) {
+          await tx.campaignTemplate.update({
+            where: { id: payload.id },
+            data: {
+              name: payload.name,
+              category: "mjml-editor",
+              subject: payload.subject?.trim() || payload.name,
+              html: payload.htmlOutput,
+            },
+          });
+        }
+
+        return editorTemplate;
+      });
+
+      return success(updated);
+    }
+
+    const template = await prisma.$transaction(async (tx) => {
+      const editorTemplate = await tx.mailerEditorTemplate.create({
         data: {
+          desktopUserId: auth.user.id,
           name: payload.name,
           subject: payload.subject ?? null,
           editorProjectJson: payload.editorProjectJson,
@@ -74,30 +134,32 @@ export async function POST(req: Request) {
         },
       });
 
-      return success(updated);
-    }
+      await tx.campaignTemplate.upsert({
+        where: { id: editorTemplate.id },
+        create: {
+          id: editorTemplate.id,
+          desktopUserId: auth.user.id,
+          name: payload.name,
+          category: "mjml-editor",
+          subject: payload.subject?.trim() || payload.name,
+          html: payload.htmlOutput,
+          description: "Created in MJML editor",
+        },
+        update: {
+          desktopUserId: auth.user.id,
+          name: payload.name,
+          category: "mjml-editor",
+          subject: payload.subject?.trim() || payload.name,
+          html: payload.htmlOutput,
+        },
+      });
 
-    const template = await prisma.mailerEditorTemplate.create({
-      data: {
-        desktopUserId: auth.user.id,
-        name: payload.name,
-        subject: payload.subject ?? null,
-        editorProjectJson: payload.editorProjectJson,
-        mjmlSource: payload.mjmlSource,
-        htmlOutput: payload.htmlOutput,
-      },
-      select: {
-        id: true,
-        name: true,
-        subject: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      return editorTemplate;
     });
 
     return created(template);
   } catch (err) {
-    console.error("[Editor Templates Save] Error:", err);
+    logDevError("[Editor Templates Save] Error:", err);
     return errors.serverError();
   }
 }

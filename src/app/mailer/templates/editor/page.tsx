@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Eye, ImageUp, Redo2, Save, Undo2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, ImageUp, Redo2, Save, Undo2 } from "lucide-react";
 import { MailerLoginPage } from "../../login-page";
 import { useMailerAuth } from "@/lib/mailer-auth";
 import { Button } from "@/components/ui/button";
@@ -539,7 +539,10 @@ export default function MailerTemplateEditorPage() {
 
       const exported = parseEditorExport(editor.runCommand("mjml-export"));
       const mjmlSource = exported.mjml || editor.getHtml();
-      const htmlOutput = exported.html || editor.getHtml();
+      const htmlOutput = exported.html;
+      if (!htmlOutput?.trim()) {
+        throw new Error("Save failed: unable to generate HTML from MJML");
+      }
 
       const res = await apiFetch("/api/desktop/editor-templates", {
         method: "POST",
@@ -570,6 +573,44 @@ export default function MailerTemplateEditorPage() {
       setError(err instanceof Error ? err.message : "Failed to save template");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handlePreview() {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    setError("");
+    try {
+      const exported = parseEditorExport(editor.runCommand("mjml-export"));
+      const previewHtml = exported.html?.trim();
+      if (!previewHtml?.trim()) {
+        throw new Error("Preview failed: generated HTML is empty");
+      }
+
+      const previewWindow = window.open("", "_blank", "noopener,noreferrer");
+      if (!previewWindow) {
+        throw new Error("Preview blocked by browser popup settings");
+      }
+
+      const documentHtml = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Template Preview</title>
+    <style>
+      body { margin: 0; background: #f3f4f6; }
+    </style>
+  </head>
+  <body>${previewHtml}</body>
+</html>`;
+
+      previewWindow.document.open();
+      previewWindow.document.write(documentHtml);
+      previewWindow.document.close();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Preview failed: unable to render HTML");
     }
   }
 
@@ -650,10 +691,10 @@ export default function MailerTemplateEditorPage() {
               variant="outline"
               size="sm"
               className="h-8"
-              onClick={() => runEditorCommand("preview")}
+              onClick={() => void handlePreview()}
               disabled={initializing}
             >
-              <Eye className="h-3.5 w-3.5" />
+              <ExternalLink className="h-3.5 w-3.5" />
               Preview
             </Button>
           </div>
