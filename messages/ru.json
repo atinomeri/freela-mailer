@@ -61,15 +61,63 @@
     },
     "dashboard": {
       "title": "Дашборд",
+      "description": "Управляйте кампаниями, контактами, шаблонами и готовностью отправки в одном понятном месте.",
       "welcomeBack": "С возвращением, {email}",
       "campaigns": "Кампании",
       "totalContacts": "Всего контактов",
       "totalSent": "Отправлено",
       "totalOpened": "Открыто",
       "totalClicked": "Клики",
+      "kpis": {
+        "totalCampaigns": "Всего кампаний",
+        "emailsSent": "Писем отправлено",
+        "openRate": "Открытия",
+        "clickRate": "Клики"
+      },
+      "quickActions": {
+        "createCampaign": {
+          "title": "Создать кампанию",
+          "description": "Начните новую email-кампанию и выберите получателей.",
+          "action": "Создать кампанию"
+        },
+        "importContacts": {
+          "title": "Импортировать контакты",
+          "description": "Добавьте или обновите людей, которым хотите писать.",
+          "action": "Импортировать"
+        },
+        "createTemplate": {
+          "title": "Создать шаблон",
+          "description": "Подготовьте повторно используемый макет письма.",
+          "action": "Создать шаблон"
+        }
+      },
       "recentActivity": "Последняя активность",
+      "recentDescription": "Краткий список кампаний, с которыми вы работали недавно.",
       "viewAllCampaigns": "Все кампании",
       "activityLine": "Отправлено {sent} | Open rate {openRate}% | Click rate {clickRate}%",
+      "openCampaign": "Открыть",
+      "emptyState": {
+        "title": "Кампаний пока нет",
+        "description": "Создайте первую кампанию, чтобы начать отправку и отслеживать результаты.",
+        "action": "Создать кампанию"
+      },
+      "senderStatus": {
+        "title": "Аккаунты отправки",
+        "checking": "Проверяем",
+        "checkingDescription": "Проверяем, готовы ли аккаунты отправки.",
+        "connected": "Подключено",
+        "connectedDescription": "Аккаунт отправки готов для кампаний.",
+        "needsAttention": "Нужно внимание",
+        "needsAttentionDescription": "Проверьте аккаунт отправки перед следующей кампанией.",
+        "notSetUp": "Не настроено",
+        "notSetUpDescription": "Добавьте аккаунт отправки, чтобы доставлять кампании.",
+        "action": "Управлять аккаунтами"
+      },
+      "contactsPrompt": {
+        "title": "Контактов пока нет",
+        "description": "Импортируйте контакты перед первой отправкой.",
+        "action": "Импортировать контакты"
+      },
       "emptyCampaigns": "Создайте первую кампанию",
       "emptyContacts": "Импортируйте контакты, чтобы начать"
     },

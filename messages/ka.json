@@ -61,15 +61,63 @@
     },
     "dashboard": {
       "title": "დეშბორდი",
+      "description": "მართე კამპანიები, კონტაქტები, შაბლონები და გაგზავნის მზადყოფნა ერთ მარტივ სივრცეში.",
       "welcomeBack": "კეთილი დაბრუნება, {email}",
       "campaigns": "კამპანიები",
       "totalContacts": "კონტაქტები სულ",
       "totalSent": "გაგზავნილი",
       "totalOpened": "გახსნილი",
       "totalClicked": "დაკლიკებული",
+      "kpis": {
+        "totalCampaigns": "კამპანიები სულ",
+        "emailsSent": "გაგზავნილი წერილები",
+        "openRate": "გახსნის მაჩვენებელი",
+        "clickRate": "კლიკის მაჩვენებელი"
+      },
+      "quickActions": {
+        "createCampaign": {
+          "title": "კამპანიის შექმნა",
+          "description": "დაიწყე ახალი email-კამპანია და აირჩიე მიმღებები.",
+          "action": "კამპანიის შექმნა"
+        },
+        "importContacts": {
+          "title": "კონტაქტების იმპორტი",
+          "description": "დაამატე ან განაახლე ადამიანები, ვისთანაც კომუნიკაცია გინდა.",
+          "action": "იმპორტი"
+        },
+        "createTemplate": {
+          "title": "შაბლონის შექმნა",
+          "description": "მოამზადე მრავალჯერადი გამოყენების email-მაკეტი.",
+          "action": "შაბლონის შექმნა"
+        }
+      },
       "recentActivity": "ბოლო აქტივობა",
+      "recentDescription": "ბოლო კამპანიების მოკლე სია.",
       "viewAllCampaigns": "ყველა კამპანია",
       "activityLine": "გაგზავნილი {sent} | Open rate {openRate}% | Click rate {clickRate}%",
+      "openCampaign": "გახსნა",
+      "emptyState": {
+        "title": "კამპანიები ჯერ არ არის",
+        "description": "შექმენი პირველი კამპანია, რომ დაიწყო გაგზავნა და შედეგების ნახვა.",
+        "action": "კამპანიის შექმნა"
+      },
+      "senderStatus": {
+        "title": "გაგზავნის ანგარიშები",
+        "checking": "მოწმდება",
+        "checkingDescription": "ვამოწმებთ, მზად არის თუ არა გაგზავნის ანგარიშები.",
+        "connected": "დაკავშირებულია",
+        "connectedDescription": "გაგზავნის ანგარიში მზად არის კამპანიებისთვის.",
+        "needsAttention": "საჭიროა ყურადღება",
+        "needsAttentionDescription": "შემდეგ კამპანიამდე გადაამოწმე გაგზავნის ანგარიში.",
+        "notSetUp": "არ არის დაყენებული",
+        "notSetUpDescription": "დაამატე გაგზავნის ანგარიში, რომ კამპანიები გაიგზავნოს.",
+        "action": "ანგარიშების მართვა"
+      },
+      "contactsPrompt": {
+        "title": "კონტაქტები ჯერ არ არის",
+        "description": "პირველ გაგზავნამდე კონტაქტები დააიმპორტე.",
+        "action": "კონტაქტების იმპორტი"
+      },
       "emptyCampaigns": "შექმენი პირველი კამპანია",
       "emptyContacts": "დასაწყებად კონტაქტები დაამატე"
     },

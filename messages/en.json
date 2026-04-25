@@ -61,15 +61,63 @@
     },
     "dashboard": {
       "title": "Dashboard",
+      "description": "Manage campaigns, contacts, templates, and sending readiness from one clear workspace.",
       "welcomeBack": "Welcome back, {email}",
       "campaigns": "Campaigns",
       "totalContacts": "Total Contacts",
       "totalSent": "Sent",
       "totalOpened": "Opened",
       "totalClicked": "Clicked",
+      "kpis": {
+        "totalCampaigns": "Total campaigns",
+        "emailsSent": "Emails sent",
+        "openRate": "Open rate",
+        "clickRate": "Click rate"
+      },
+      "quickActions": {
+        "createCampaign": {
+          "title": "Create campaign",
+          "description": "Start a new email campaign and choose who should receive it.",
+          "action": "Create campaign"
+        },
+        "importContacts": {
+          "title": "Import contacts",
+          "description": "Add or update the people you want to reach.",
+          "action": "Import contacts"
+        },
+        "createTemplate": {
+          "title": "Create template",
+          "description": "Build a reusable email layout before your next send.",
+          "action": "Create template"
+        }
+      },
       "recentActivity": "Recent activity",
+      "recentDescription": "A short view of the campaigns you worked on most recently.",
       "viewAllCampaigns": "View all campaigns",
       "activityLine": "Sent {sent} | Open rate {openRate}% | Click rate {clickRate}%",
+      "openCampaign": "Open",
+      "emptyState": {
+        "title": "No campaigns yet",
+        "description": "Create your first campaign to start sending emails and tracking results.",
+        "action": "Create campaign"
+      },
+      "senderStatus": {
+        "title": "Sending accounts",
+        "checking": "Checking",
+        "checkingDescription": "Checking whether your sending accounts are ready.",
+        "connected": "Connected",
+        "connectedDescription": "Your sending account is ready for campaigns.",
+        "needsAttention": "Needs attention",
+        "needsAttentionDescription": "Review your sending account before starting the next campaign.",
+        "notSetUp": "Not set up",
+        "notSetUpDescription": "Add a sending account so campaigns can be delivered.",
+        "action": "Manage accounts"
+      },
+      "contactsPrompt": {
+        "title": "Contacts are empty",
+        "description": "Import contacts before sending your first campaign.",
+        "action": "Import contacts"
+      },
       "emptyCampaigns": "Create your first campaign",
       "emptyContacts": "Import your contacts to get started"
     },
