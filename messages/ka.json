@@ -63,6 +63,9 @@
       "title": "დეშბორდი",
       "description": "მართე კამპანიები, კონტაქტები, შაბლონები და გაგზავნის მზადყოფნა ერთ მარტივ სივრცეში.",
       "welcomeBack": "კეთილი დაბრუნება, {email}",
+      "workspaceLabel": "სამუშაო სივრცე",
+      "nextStep": "დაიწყე",
+      "recommended": "რეკომენდებული",
       "campaigns": "კამპანიები",
       "totalContacts": "კონტაქტები სულ",
       "totalSent": "გაგზავნილი",
@@ -70,10 +73,17 @@
       "totalClicked": "დაკლიკებული",
       "kpis": {
         "totalCampaigns": "კამპანიები სულ",
+        "totalCampaignsDescription": "ყველა კამპანია სამუშაო სივრცეში",
         "emailsSent": "გაგზავნილი წერილები",
+        "emailsSentDescription": "ყველა მიწოდება კამპანიების მიხედვით",
         "openRate": "გახსნის მაჩვენებელი",
-        "clickRate": "კლიკის მაჩვენებელი"
+        "openRateDescription": "საშუალო ჩართულობა",
+        "clickRate": "კლიკის მაჩვენებელი",
+        "clickRateDescription": "საშუალო კლიკ-რეიტი",
+        "noEngagementDescription": "გაუშვი კამპანია შედეგების სანახავად"
       },
+      "quickActionsTitle": "სწრაფი მოქმედებები",
+      "quickActionsDescription": "ხშირი ამოცანები, რომ გაგზავნა შეუჩერებლად მიდიოდეს.",
       "quickActions": {
         "createCampaign": {
           "title": "კამპანიის შექმნა",
@@ -93,30 +103,39 @@
       },
       "recentActivity": "ბოლო აქტივობა",
       "recentDescription": "ბოლო კამპანიების მოკლე სია.",
-      "viewAllCampaigns": "ყველა კამპანია",
+      "viewAllCampaigns": "ყველა",
       "activityLine": "გაგზავნილი {sent} | Open rate {openRate}% | Click rate {clickRate}%",
       "openCampaign": "გახსნა",
+      "table": {
+        "campaign": "კამპანია",
+        "status": "სტატუსი",
+        "sent": "გაგზავნილი",
+        "openRate": "გახსნა / კლიკი",
+        "action": ""
+      },
       "emptyState": {
         "title": "კამპანიები ჯერ არ არის",
         "description": "შექმენი პირველი კამპანია, რომ დაიწყო გაგზავნა და შედეგების ნახვა.",
-        "action": "კამპანიის შექმნა"
+        "action": "შექმენი პირველი კამპანია"
       },
       "senderStatus": {
         "title": "გაგზავნის ანგარიშები",
         "checking": "მოწმდება",
         "checkingDescription": "ვამოწმებთ, მზად არის თუ არა გაგზავნის ანგარიშები.",
-        "connected": "დაკავშირებულია",
+        "connected": "მზადაა გაგზავნისთვის",
         "connectedDescription": "გაგზავნის ანგარიში მზად არის კამპანიებისთვის.",
         "needsAttention": "საჭიროა ყურადღება",
         "needsAttentionDescription": "შემდეგ კამპანიამდე გადაამოწმე გაგზავნის ანგარიში.",
         "notSetUp": "არ არის დაყენებული",
         "notSetUpDescription": "დაამატე გაგზავნის ანგარიში, რომ კამპანიები გაიგზავნოს.",
+        "accountsLabel": "დაკავშირებული ანგარიშები",
         "action": "ანგარიშების მართვა"
       },
       "contactsPrompt": {
-        "title": "კონტაქტები ჯერ არ არის",
+        "title": "კონტაქტები",
         "description": "პირველ გაგზავნამდე კონტაქტები დააიმპორტე.",
-        "action": "კონტაქტების იმპორტი"
+        "readyDescription": "შენი კონტაქტების სიები მზადაა. ნებისმიერ დროს განაახლე.",
+        "action": "კონტაქტების მართვა"
       },
       "emptyCampaigns": "შექმენი პირველი კამპანია",
       "emptyContacts": "დასაწყებად კონტაქტები დაამატე"

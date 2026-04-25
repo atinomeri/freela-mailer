@@ -63,6 +63,9 @@
       "title": "Dashboard",
       "description": "Manage campaigns, contacts, templates, and sending readiness from one clear workspace.",
       "welcomeBack": "Welcome back, {email}",
+      "workspaceLabel": "Workspace overview",
+      "nextStep": "Get started",
+      "recommended": "Recommended",
       "campaigns": "Campaigns",
       "totalContacts": "Total Contacts",
       "totalSent": "Sent",
@@ -70,10 +73,17 @@
       "totalClicked": "Clicked",
       "kpis": {
         "totalCampaigns": "Total campaigns",
+        "totalCampaignsDescription": "All campaigns in your workspace",
         "emailsSent": "Emails sent",
+        "emailsSentDescription": "Total deliveries across campaigns",
         "openRate": "Open rate",
-        "clickRate": "Click rate"
+        "openRateDescription": "Average inbox engagement",
+        "clickRate": "Click rate",
+        "clickRateDescription": "Average click-through rate",
+        "noEngagementDescription": "Send a campaign to see results"
       },
+      "quickActionsTitle": "Quick actions",
+      "quickActionsDescription": "Common tasks to keep your sending pipeline moving.",
       "quickActions": {
         "createCampaign": {
           "title": "Create campaign",
@@ -93,30 +103,39 @@
       },
       "recentActivity": "Recent activity",
       "recentDescription": "A short view of the campaigns you worked on most recently.",
-      "viewAllCampaigns": "View all campaigns",
+      "viewAllCampaigns": "View all",
       "activityLine": "Sent {sent} | Open rate {openRate}% | Click rate {clickRate}%",
       "openCampaign": "Open",
+      "table": {
+        "campaign": "Campaign",
+        "status": "Status",
+        "sent": "Sent",
+        "openRate": "Open / Click",
+        "action": ""
+      },
       "emptyState": {
         "title": "No campaigns yet",
         "description": "Create your first campaign to start sending emails and tracking results.",
-        "action": "Create campaign"
+        "action": "Create your first campaign"
       },
       "senderStatus": {
         "title": "Sending accounts",
         "checking": "Checking",
         "checkingDescription": "Checking whether your sending accounts are ready.",
-        "connected": "Connected",
+        "connected": "Ready to send",
         "connectedDescription": "Your sending account is ready for campaigns.",
         "needsAttention": "Needs attention",
         "needsAttentionDescription": "Review your sending account before starting the next campaign.",
         "notSetUp": "Not set up",
         "notSetUpDescription": "Add a sending account so campaigns can be delivered.",
+        "accountsLabel": "Connected accounts",
         "action": "Manage accounts"
       },
       "contactsPrompt": {
-        "title": "Contacts are empty",
+        "title": "Contacts",
         "description": "Import contacts before sending your first campaign.",
-        "action": "Import contacts"
+        "readyDescription": "Your contact lists are ready. Add or update them anytime.",
+        "action": "Manage contacts"
       },
       "emptyCampaigns": "Create your first campaign",
       "emptyContacts": "Import your contacts to get started"

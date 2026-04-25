@@ -63,6 +63,9 @@
       "title": "Дашборд",
       "description": "Управляйте кампаниями, контактами, шаблонами и готовностью отправки в одном понятном месте.",
       "welcomeBack": "С возвращением, {email}",
+      "workspaceLabel": "Рабочее пространство",
+      "nextStep": "Начните",
+      "recommended": "Рекомендуем",
       "campaigns": "Кампании",
       "totalContacts": "Всего контактов",
       "totalSent": "Отправлено",
@@ -70,10 +73,17 @@
       "totalClicked": "Клики",
       "kpis": {
         "totalCampaigns": "Всего кампаний",
+        "totalCampaignsDescription": "Все кампании в вашем пространстве",
         "emailsSent": "Писем отправлено",
+        "emailsSentDescription": "Все доставки по кампаниям",
         "openRate": "Открытия",
-        "clickRate": "Клики"
+        "openRateDescription": "Средняя вовлечённость",
+        "clickRate": "Клики",
+        "clickRateDescription": "Средний CTR",
+        "noEngagementDescription": "Запустите кампанию, чтобы увидеть результаты"
       },
+      "quickActionsTitle": "Быстрые действия",
+      "quickActionsDescription": "Частые задачи, чтобы поддерживать рассылку в движении.",
       "quickActions": {
         "createCampaign": {
           "title": "Создать кампанию",
@@ -93,30 +103,39 @@
       },
       "recentActivity": "Последняя активность",
       "recentDescription": "Краткий список кампаний, с которыми вы работали недавно.",
-      "viewAllCampaigns": "Все кампании",
+      "viewAllCampaigns": "Все",
       "activityLine": "Отправлено {sent} | Open rate {openRate}% | Click rate {clickRate}%",
       "openCampaign": "Открыть",
+      "table": {
+        "campaign": "Кампания",
+        "status": "Статус",
+        "sent": "Отправлено",
+        "openRate": "Открытия / Клики",
+        "action": ""
+      },
       "emptyState": {
         "title": "Кампаний пока нет",
         "description": "Создайте первую кампанию, чтобы начать отправку и отслеживать результаты.",
-        "action": "Создать кампанию"
+        "action": "Создать первую кампанию"
       },
       "senderStatus": {
         "title": "Аккаунты отправки",
         "checking": "Проверяем",
         "checkingDescription": "Проверяем, готовы ли аккаунты отправки.",
-        "connected": "Подключено",
+        "connected": "Готов к отправке",
         "connectedDescription": "Аккаунт отправки готов для кампаний.",
         "needsAttention": "Нужно внимание",
         "needsAttentionDescription": "Проверьте аккаунт отправки перед следующей кампанией.",
         "notSetUp": "Не настроено",
         "notSetUpDescription": "Добавьте аккаунт отправки, чтобы доставлять кампании.",
+        "accountsLabel": "Подключено аккаунтов",
         "action": "Управлять аккаунтами"
       },
       "contactsPrompt": {
-        "title": "Контактов пока нет",
+        "title": "Контакты",
         "description": "Импортируйте контакты перед первой отправкой.",
-        "action": "Импортировать контакты"
+        "readyDescription": "Ваши списки контактов готовы. Обновляйте их в любое время.",
+        "action": "Управлять контактами"
       },
       "emptyCampaigns": "Создайте первую кампанию",
       "emptyContacts": "Импортируйте контакты, чтобы начать"
