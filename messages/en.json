@@ -336,6 +336,18 @@
       "senderNamePlaceholder": "Your team or brand",
       "senderEmailLabel": "Sender email",
       "senderEmailPlaceholder": "name@company.com",
+      "senderAccount": {
+        "label": "Sending account",
+        "help": "Pick an account so we can send through it. The fields below get filled from the account — you can override them.",
+        "placeholder": "Select a sending account",
+        "noneOption": "Use custom sender details below",
+        "manageLink": "Manage sending accounts",
+        "noAccountsTitle": "No sending accounts yet",
+        "noAccountsDescription": "Add a sending account so we can deliver your campaigns.",
+        "addAccountAction": "Add sending account",
+        "unusableError": "This sending account has no usable sender email.",
+        "providerLabel": "via {provider}"
+      },
       "templateLabel": "Template",
       "templateNoneOption": "No template — write from scratch",
       "htmlBodyLabel": "Email content",

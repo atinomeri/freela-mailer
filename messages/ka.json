@@ -336,6 +336,18 @@
       "senderNamePlaceholder": "შენი გუნდი ან ბრენდი",
       "senderEmailLabel": "გამგზავნის ელფოსტა",
       "senderEmailPlaceholder": "name@company.com",
+      "senderAccount": {
+        "label": "გაგზავნის ანგარიში",
+        "help": "აირჩიე ანგარიში, რომ მისი მეშვეობით გავაგზავნოთ. ქვემოთ მოცემული ველები ავტომატურად შეივსება — საჭიროების შემთხვევაში ჩაასწორე.",
+        "placeholder": "აირჩიე გაგზავნის ანგარიში",
+        "noneOption": "ჩაწერე გამგზავნი ხელით",
+        "manageLink": "ანგარიშების მართვა",
+        "noAccountsTitle": "გაგზავნის ანგარიში ჯერ არ არის",
+        "noAccountsDescription": "დაამატე გაგზავნის ანგარიში, რომ შეგვეძლოს კამპანიების მიწოდება.",
+        "addAccountAction": "ანგარიშის დამატება",
+        "unusableError": "ამ გაგზავნის ანგარიშს არ აქვს გამოსადეგი ელფოსტა.",
+        "providerLabel": "{provider}-ის გავლით"
+      },
       "templateLabel": "შაბლონი",
       "templateNoneOption": "შაბლონის გარეშე — ნულიდან",
       "htmlBodyLabel": "ელფოსტის შინაარსი",

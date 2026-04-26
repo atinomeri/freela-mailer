@@ -46,6 +46,56 @@ interface ContactListOption {
   contactCount: number;
 }
 
+/** Raw shape returned by `GET /api/desktop/smtp-pool` (DesktopSmtpPoolAccount). */
+interface SmtpPoolAccount {
+  id: string;
+  host: string;
+  port: number;
+  username: string;
+  fromEmail: string | null;
+  fromName: string | null;
+  active: boolean;
+}
+
+/** Wizard-side enriched view: same row plus computed effective sender identity. */
+interface SenderAccount extends SmtpPoolAccount {
+  effectiveFromEmail: string;
+  effectiveFromName: string;
+  providerLabel: string;
+  /** True when the account has at least one usable email (always true today since username is required, but kept as a guard). */
+  usable: boolean;
+}
+
+function providerLabelFromHost(host: string): string {
+  const h = host.toLowerCase();
+  if (h.includes("gmail")) return "Gmail";
+  if (h.includes("office365") || h.includes("outlook")) return "Outlook";
+  if (h.includes("yahoo")) return "Yahoo";
+  if (h.includes("sendgrid")) return "SendGrid";
+  if (h.includes("mailgun")) return "Mailgun";
+  if (h.includes("amazonaws") || h.includes("ses")) return "Amazon SES";
+  return host || "Custom";
+}
+
+/** Compute the spec-required effective sender identity per account. */
+function enrichAccount(raw: SmtpPoolAccount): SenderAccount {
+  const fromEmail = (raw.fromEmail ?? "").trim();
+  const username = (raw.username ?? "").trim();
+  const fromName = (raw.fromName ?? "").trim();
+  const providerLabel = providerLabelFromHost(raw.host);
+
+  const effectiveFromEmail = fromEmail || username;
+  const effectiveFromName = fromName || providerLabel || effectiveFromEmail;
+
+  return {
+    ...raw,
+    effectiveFromEmail,
+    effectiveFromName,
+    providerLabel,
+    usable: effectiveFromEmail.length > 0,
+  };
+}
+
 interface PreflightResult {
   status: "good" | "warning" | "critical";
   recommendations: string[];
@@ -251,6 +301,13 @@ export default function NewCampaignPage() {
   const [contactLists, setContactLists] = useState<ContactListOption[]>([]);
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
 
+  const [senderAccounts, setSenderAccounts] = useState<SenderAccount[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+  // Track whether the user has manually edited the sender fields after selecting
+  // an account; if they have, we stop overwriting their input on re-selection.
+  const [senderEmailDirty, setSenderEmailDirty] = useState(false);
+  const [senderNameDirty, setSenderNameDirty] = useState(false);
+
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [templateId, setTemplateId] = useState("");
   const [subject, setSubject] = useState("");
@@ -283,9 +340,10 @@ export default function NewCampaignPage() {
     if (!user) return;
     async function loadData() {
       try {
-        const [templatesRes, listsRes] = await Promise.all([
+        const [templatesRes, listsRes, accountsRes] = await Promise.all([
           apiFetch("/api/desktop/templates"),
           apiFetch("/api/desktop/contact-lists?page=1&limit=100"),
+          apiFetch("/api/desktop/smtp-pool"),
         ]);
         if (templatesRes.ok) {
           const templatesBody = await templatesRes.json();
@@ -295,12 +353,45 @@ export default function NewCampaignPage() {
           const listsBody = await listsRes.json();
           setContactLists(listsBody.data ?? []);
         }
+        if (accountsRes.ok) {
+          const accountsBody = (await accountsRes.json()) as { data?: SmtpPoolAccount[] };
+          // Show every account regardless of whether fromEmail / fromName is empty —
+          // the worker already falls back to username at send time.
+          const enriched = (accountsBody.data ?? []).map(enrichAccount);
+          setSenderAccounts(enriched);
+
+          // Auto-select the only active account so the user does not have to think.
+          const activeUsable = enriched.filter((a) => a.active && a.usable);
+          if (activeUsable.length === 1) {
+            const only = activeUsable[0];
+            setSelectedAccountId(only.id);
+            setSenderEmail(only.effectiveFromEmail);
+            setSenderName(only.effectiveFromName);
+          }
+        }
       } catch {
         // keep empty state
       }
     }
     void loadData();
   }, [user, apiFetch]);
+
+  function handleAccountChange(nextId: string) {
+    setSelectedAccountId(nextId);
+    if (!nextId) return; // user picked "none — type manually"
+    const acc = senderAccounts.find((a) => a.id === nextId);
+    if (!acc) return;
+    // Only prefill fields the user hasn't manually touched, so we don't
+    // overwrite custom values they typed before changing the account.
+    if (!senderEmailDirty) setSenderEmail(acc.effectiveFromEmail);
+    if (!senderNameDirty) setSenderName(acc.effectiveFromName);
+  }
+
+  const selectedAccount = useMemo(
+    () => senderAccounts.find((a) => a.id === selectedAccountId) ?? null,
+    [senderAccounts, selectedAccountId],
+  );
+  const selectedAccountUnusable = Boolean(selectedAccount && !selectedAccount.usable);
 
   const selectedLists = useMemo(
     () => contactLists.filter((list) => selectedListIds.includes(list.id)),
@@ -313,10 +404,13 @@ export default function NewCampaignPage() {
   );
   const hasAudienceLists = contactLists.some((list) => Number(list.contactCount ?? 0) > 0);
 
-  const detailsValid = useMemo(
-    () => name.trim().length > 0 && senderEmail.includes("@"),
-    [name, senderEmail],
-  );
+  const detailsValid = useMemo(() => {
+    if (name.trim().length === 0) return false;
+    // A picked account is valid if it has a usable sender (typically true since
+    // username is required at create time). Also accept a manually typed email.
+    if (selectedAccount && selectedAccount.usable) return true;
+    return senderEmail.includes("@");
+  }, [name, senderEmail, selectedAccount]);
   const audienceValid = useMemo(
     () => selectedListIds.length > 0 && recipientsCount > 0,
     [selectedListIds, recipientsCount],
@@ -598,12 +692,89 @@ export default function NewCampaignPage() {
                   required
                 />
               </label>
+
+              {/* Sending account picker */}
+              {senderAccounts.length === 0 ? (
+                <Alert
+                  variant="warning"
+                  title={tw("senderAccount.noAccountsTitle")}
+                  icon={<AlertCircle className="h-4 w-4" strokeWidth={2.2} />}
+                >
+                  <div className="space-y-2">
+                    <p>{tw("senderAccount.noAccountsDescription")}</p>
+                    <ButtonLink
+                      href="/smtp-pool"
+                      variant="secondary"
+                      size="sm"
+                      rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
+                    >
+                      {tw("senderAccount.addAccountAction")}
+                    </ButtonLink>
+                  </div>
+                </Alert>
+              ) : (
+                <div className="grid gap-1.5 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      htmlFor="wizard-sender-account"
+                      className="font-medium text-foreground"
+                    >
+                      {tw("senderAccount.label")}
+                    </label>
+                    <Link
+                      href="/smtp-pool"
+                      className="text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {tw("senderAccount.manageLink")}
+                    </Link>
+                  </div>
+                  <select
+                    id="wizard-sender-account"
+                    value={selectedAccountId}
+                    onChange={(e) => handleAccountChange(e.target.value)}
+                    className={cn(
+                      "h-11 w-full rounded-lg border border-border/80 bg-background/80 px-3 text-sm",
+                      "outline-none transition-colors hover:border-border",
+                      "focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/30",
+                    )}
+                  >
+                    <option value="">{tw("senderAccount.noneOption")}</option>
+                    {senderAccounts.map((acc) => {
+                      const label = acc.effectiveFromName;
+                      const detail = acc.effectiveFromEmail
+                        ? `${acc.effectiveFromEmail} · ${acc.providerLabel}`
+                        : acc.providerLabel;
+                      const inactive = !acc.active ? " (inactive)" : "";
+                      return (
+                        <option key={acc.id} value={acc.id}>
+                          {label} — {detail}
+                          {inactive}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {selectedAccount && (
+                    <p className="mt-0.5 text-[12px] leading-5 text-muted-foreground">
+                      {tw("senderAccount.help")}
+                    </p>
+                  )}
+                  {selectedAccountUnusable && (
+                    <Alert variant="destructive" className="mt-2">
+                      {tw("senderAccount.unusableError")}
+                    </Alert>
+                  )}
+                </div>
+              )}
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-1.5 text-sm">
                   <span className="font-medium text-foreground">{tw("senderNameLabel")}</span>
                   <Input
                     value={senderName}
-                    onChange={(e) => setSenderName(e.target.value)}
+                    onChange={(e) => {
+                      setSenderName(e.target.value);
+                      setSenderNameDirty(true);
+                    }}
                     placeholder={tw("senderNamePlaceholder")}
                   />
                 </label>
@@ -611,7 +782,10 @@ export default function NewCampaignPage() {
                   <span className="font-medium text-foreground">{tw("senderEmailLabel")}</span>
                   <Input
                     value={senderEmail}
-                    onChange={(e) => setSenderEmail(e.target.value)}
+                    onChange={(e) => {
+                      setSenderEmail(e.target.value);
+                      setSenderEmailDirty(true);
+                    }}
                     type="email"
                     placeholder={tw("senderEmailPlaceholder")}
                     required

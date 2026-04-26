@@ -336,6 +336,18 @@
       "senderNamePlaceholder": "Команда или бренд",
       "senderEmailLabel": "Email отправителя",
       "senderEmailPlaceholder": "name@company.com",
+      "senderAccount": {
+        "label": "Аккаунт отправки",
+        "help": "Выберите аккаунт, через который отправлять. Поля ниже заполнятся из аккаунта — при необходимости измените их.",
+        "placeholder": "Выберите аккаунт отправки",
+        "noneOption": "Использовать ручной ввод ниже",
+        "manageLink": "Управлять аккаунтами",
+        "noAccountsTitle": "Аккаунтов отправки пока нет",
+        "noAccountsDescription": "Добавьте аккаунт отправки, чтобы кампании могли уходить.",
+        "addAccountAction": "Добавить аккаунт",
+        "unusableError": "У этого аккаунта нет пригодного email отправителя.",
+        "providerLabel": "через {provider}"
+      },
       "templateLabel": "Шаблон",
       "templateNoneOption": "Без шаблона — с нуля",
       "htmlBodyLabel": "Содержимое письма",
