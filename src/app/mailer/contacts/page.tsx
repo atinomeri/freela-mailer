@@ -1,22 +1,35 @@
 "use client";
 
 import { useMailerAuth } from "@/lib/mailer-auth";
-import { useEffect, useState, useCallback, useRef } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionCard } from "@/components/ui/section-card";
+import { Toolbar, ToolbarSpacer } from "@/components/ui/toolbar";
+import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageSpinner } from "@/components/ui/spinner";
-import { ConfirmModal, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal";
 import {
-  Plus,
-  Users,
-  Upload,
-  Trash2,
+  ConfirmModal,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@/components/ui/modal";
+import {
+  ChevronDown,
   ChevronRight,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  Users,
 } from "lucide-react";
 import { MailerLoginPage } from "../login-page";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 
 interface ContactList {
   id: string;
@@ -32,6 +45,10 @@ interface ApiErrorShape {
   message?: string;
 }
 
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat().format(value);
+}
+
 export default function ContactsPage() {
   const { user, apiFetch } = useMailerAuth();
   const t = useTranslations("mailer");
@@ -41,6 +58,7 @@ export default function ContactsPage() {
   const [createName, setCreateName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
   // Upload state
   const [uploadListId, setUploadListId] = useState<string | null>(null);
@@ -62,7 +80,7 @@ export default function ContactsPage() {
       const res = await apiFetch("/api/desktop/contact-lists?limit=100");
       if (res.ok) {
         const data = await res.json();
-        setLists(data.data);
+        setLists(data.data ?? []);
       }
     } catch {
       // handled
@@ -72,8 +90,14 @@ export default function ContactsPage() {
   }, [apiFetch]);
 
   useEffect(() => {
-    if (user) loadLists();
+    if (user) void loadLists();
   }, [user, loadLists]);
+
+  const filteredLists = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return lists;
+    return lists.filter((list) => list.name.toLowerCase().includes(q));
+  }, [lists, search]);
 
   if (!user) return <MailerLoginPage />;
 
@@ -181,12 +205,10 @@ export default function ContactsPage() {
     setContactsLoading(true);
 
     try {
-      const res = await apiFetch(
-        `/api/desktop/contact-lists/${listId}/contacts?limit=20`,
-      );
+      const res = await apiFetch(`/api/desktop/contact-lists/${listId}/contacts?limit=20`);
       if (res.ok) {
         const data = await res.json();
-        setContacts(data.data);
+        setContacts(data.data ?? []);
       }
     } catch {
       // ignore
@@ -195,139 +217,190 @@ export default function ContactsPage() {
     }
   }
 
+  const hasLists = lists.length > 0;
+  const hasFilters = search.trim() !== "";
+
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t("contacts.title")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("contacts.description")}
-          </p>
-        </div>
-        <Button size="sm" onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4" />
-          {t("actions.newList")}
-        </Button>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6 lg:space-y-8">
+      <PageHeader
+        title={t("contacts.title")}
+        description={t("contacts.description")}
+        actions={
+          <Button
+            size="md"
+            onClick={() => setShowCreate(true)}
+            leftIcon={<Plus className="h-4 w-4" />}
+          >
+            {t("contacts.newListAction")}
+          </Button>
+        }
+      />
 
       {error && (
-        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+        <Alert variant="destructive" onDismiss={() => setError("")} dismissLabel={t("actions.dismiss")}>
           {error}
-          <button className="ml-2 underline" onClick={() => setError("")}>{t("actions.dismiss")}</button>
-        </div>
+        </Alert>
+      )}
+      {uploadResult && (
+        <Alert variant="success" onDismiss={() => setUploadResult(null)} dismissLabel={t("actions.dismiss")}>
+          {uploadResult}
+        </Alert>
       )}
 
-      {uploadResult && (
-        <div className="mb-4 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
-          {uploadResult}
-          <button className="ml-2 underline" onClick={() => setUploadResult(null)}>{t("actions.dismiss")}</button>
-        </div>
+      {hasLists && (
+        <Toolbar>
+          <div className="relative w-full sm:max-w-xs">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <Search className="h-4 w-4" strokeWidth={2.2} />
+            </span>
+            <Input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("contacts.searchPlaceholder")}
+              className="pl-10"
+              aria-label={t("contacts.searchPlaceholder")}
+            />
+          </div>
+          <ToolbarSpacer />
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={() => setSearch("")}>
+              {t("actions.resetFilters")}
+            </Button>
+          )}
+        </Toolbar>
       )}
 
       {loading ? (
-        <PageSpinner />
-      ) : lists.length === 0 ? (
-        <EmptyState
-          icon={<Users className="h-12 w-12" />}
-          title={t("contacts.noListsTitle")}
-          description={t("contacts.noListsDescription")}
-          action={{ label: t("actions.newList"), onClick: () => setShowCreate(true) }}
-        />
+        <SectionCard padded>
+          <PageSpinner />
+        </SectionCard>
+      ) : !hasLists ? (
+        <SectionCard padded={false} bodyClassName="p-5 sm:p-6">
+          <EmptyState
+            icon={<Users strokeWidth={1.8} />}
+            title={t("contacts.noListsTitle")}
+            description={t("contacts.noListsDescription")}
+            action={{
+              label: t("contacts.newListAction"),
+              onClick: () => setShowCreate(true),
+            }}
+          />
+        </SectionCard>
+      ) : filteredLists.length === 0 ? (
+        <SectionCard padded={false} bodyClassName="p-5 sm:p-6">
+          <EmptyState
+            icon={<Search strokeWidth={1.8} />}
+            title={t("contacts.noResultsTitle")}
+            description={t("contacts.noResultsDescription")}
+            action={{ label: t("actions.resetFilters"), onClick: () => setSearch("") }}
+          />
+        </SectionCard>
       ) : (
         <div className="space-y-3">
-          {lists.map((list) => (
-            <div key={list.id}>
-              <Card className="p-4" hover={false}>
-                <div className="flex items-center justify-between gap-4">
+          {filteredLists.map((list) => {
+            const isExpanded = expandedList === list.id;
+            return (
+              <SectionCard key={list.id} padded bodyClassName="p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <button
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    type="button"
+                    className="group flex min-w-0 flex-1 items-center gap-3 text-left"
                     onClick={() => toggleExpand(list.id)}
+                    aria-expanded={isExpanded}
+                    aria-controls={`list-${list.id}-contacts`}
                   >
-                    <ChevronRight
-                      className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
-                        expandedList === list.id ? "rotate-90" : ""
-                      }`}
-                    />
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 transition-colors",
+                        isExpanded
+                          ? "bg-primary/10 text-primary ring-primary/15"
+                          : "bg-muted text-muted-foreground ring-border group-hover:bg-foreground/5",
+                      )}
+                      aria-hidden
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4" strokeWidth={2.2} />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" strokeWidth={2.2} />
+                      )}
+                    </span>
                     <div className="min-w-0">
-                      <h3 className="truncate font-medium">{list.name}</h3>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{t("contacts.contactsCount", { count: list.contactCount })}</span>
+                      <h3 className="truncate text-[14.5px] font-semibold tracking-tight text-foreground">
+                        {list.name}
+                      </h3>
+                      <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                        {t("contacts.contactsCount", { count: list.contactCount })}
                         {list.columns.length > 0 && (
                           <>
-                            <span>&middot;</span>
-                            <span>{t("contacts.columnsPrefix")} {list.columns.join(", ")}</span>
+                            <span className="mx-1.5 text-border">·</span>
+                            <span className="truncate">
+                              {t("contacts.columnsPrefix")} {list.columns.join(", ")}
+                            </span>
                           </>
                         )}
-                      </div>
+                      </p>
                     </div>
                   </button>
 
-                  <div className="flex shrink-0 gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => {
                         setUploadListId(list.id);
                         fileRef.current?.click();
                       }}
+                      leftIcon={<Upload className="h-3.5 w-3.5" />}
                     >
-                      <Upload className="h-4 w-4" />
-                      {t("actions.upload")}
+                      {t("contacts.uploadAction")}
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setDeleteListId(list.id)}
+                      leftIcon={<Trash2 className="h-3.5 w-3.5 text-destructive" />}
+                      className="text-destructive hover:bg-destructive/5 hover:text-destructive"
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      {t("contacts.deleteAction")}
                     </Button>
                   </div>
                 </div>
 
                 {/* Expanded contacts preview */}
-                {expandedList === list.id && (
-                  <div className="mt-4 border-t border-border pt-4">
+                {isExpanded && (
+                  <div id={`list-${list.id}-contacts`} className="mt-4 border-t border-border/60 pt-4">
                     {contactsLoading ? (
                       <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
                     ) : contacts.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        {t("contacts.noContactsYet")}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{t("contacts.noContactsYet")}</p>
                     ) : (
                       <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-[13px]">
                           <thead>
-                            <tr className="border-b border-border text-left">
-                              <th className="pb-2 pr-4 font-medium text-muted-foreground">{t("login.emailLabel")}</th>
+                            <tr className="border-b border-border/60 text-left text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                              <th className="pb-2 pr-4">{t("contacts.columns.email")}</th>
                               {list.columns
                                 .filter((c) => c.toLowerCase() !== list.emailColumn.toLowerCase())
                                 .slice(0, 4)
                                 .map((col) => (
-                                  <th
-                                    key={col}
-                                    className="pb-2 pr-4 font-medium text-muted-foreground"
-                                  >
+                                  <th key={col} className="pb-2 pr-4">
                                     {col}
                                   </th>
                                 ))}
                             </tr>
                           </thead>
-                          <tbody>
+                          <tbody className="divide-y divide-border/50">
                             {contacts.map((contact, i) => (
-                              <tr key={i} className="border-b border-border/50">
-                                <td className="py-2 pr-4">{contact.email}</td>
+                              <tr key={i}>
+                                <td className="py-2 pr-4 font-medium text-foreground">
+                                  {contact.email}
+                                </td>
                                 {list.columns
-                                  .filter(
-                                    (c) =>
-                                      c.toLowerCase() !==
-                                      list.emailColumn.toLowerCase(),
-                                  )
+                                  .filter((c) => c.toLowerCase() !== list.emailColumn.toLowerCase())
                                   .slice(0, 4)
                                   .map((col) => (
-                                    <td
-                                      key={col}
-                                      className="py-2 pr-4 text-muted-foreground"
-                                    >
+                                    <td key={col} className="py-2 pr-4 text-muted-foreground">
                                       {contact.data?.[col] ?? "—"}
                                     </td>
                                   ))}
@@ -336,7 +409,7 @@ export default function ContactsPage() {
                           </tbody>
                         </table>
                         {list.contactCount > 20 && (
-                          <p className="mt-2 text-xs text-muted-foreground">
+                          <p className="mt-2 text-[12px] text-muted-foreground">
                             {t("contacts.showingOf", { shown: 20, total: list.contactCount })}
                           </p>
                         )}
@@ -344,9 +417,9 @@ export default function ContactsPage() {
                     )}
                   </div>
                 )}
-              </Card>
-            </div>
-          ))}
+              </SectionCard>
+            );
+          })}
         </div>
       )}
 
@@ -357,7 +430,7 @@ export default function ContactsPage() {
         accept=".csv,.xlsx,.xls"
         className="hidden"
         onChange={() => {
-          if (uploadListId) handleUpload(uploadListId);
+          if (uploadListId) void handleUpload(uploadListId);
         }}
       />
 
@@ -368,7 +441,7 @@ export default function ContactsPage() {
           <form onSubmit={handleCreateList}>
             <ModalBody>
               <label className="grid gap-1.5 text-sm">
-                <span className="font-medium">{t("contacts.listNameLabel")}</span>
+                <span className="font-medium text-foreground">{t("contacts.listNameLabel")}</span>
                 <Input
                   value={createName}
                   onChange={(e) => setCreateName(e.target.value)}
@@ -379,11 +452,7 @@ export default function ContactsPage() {
               </label>
             </ModalBody>
             <ModalFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setShowCreate(false)}
-              >
+              <Button type="button" variant="ghost" onClick={() => setShowCreate(false)}>
                 {t("actions.cancel")}
               </Button>
               <Button type="submit" loading={creating}>
@@ -394,7 +463,6 @@ export default function ContactsPage() {
         </ModalContent>
       </Modal>
 
-      {/* Delete confirm */}
       <ConfirmModal
         isOpen={!!deleteListId}
         onClose={() => setDeleteListId(null)}

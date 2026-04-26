@@ -3,13 +3,28 @@
 import { useMailerAuth } from "@/lib/mailer-auth";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionCard } from "@/components/ui/section-card";
+import { MetricCard } from "@/components/ui/metric-card";
+import { Toolbar, ToolbarSpacer } from "@/components/ui/toolbar";
+import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageSpinner } from "@/components/ui/spinner";
 import { MailerLoginPage } from "../login-page";
-import { Download, ChevronLeft, ChevronRight, Mail, MousePointerClick, Eye } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Eye,
+  Mail,
+  MousePointerClick,
+  Search,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
 import { formatGeorgianDateTime } from "@/lib/date";
+import { cn } from "@/lib/utils";
 
 type Section = "SENT" | "OPENED" | "CLICKED";
 type ExportSection = Section | "ALL";
@@ -84,14 +99,13 @@ interface ExportJobStatusResponse {
   };
 }
 
-const SECTION_LABEL: Record<Section, string> = {
-  SENT: "Sent",
-  OPENED: "Opened",
-  CLICKED: "Clicked",
-};
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat().format(value);
+}
 
 export default function MailerReportsPage() {
   const { user, apiFetch } = useMailerAuth();
+  const t = useTranslations("mailer.reports");
   const searchParams = useSearchParams();
   const initialCampaign = searchParams.get("campaignId") || "";
 
@@ -131,18 +145,18 @@ export default function MailerReportsPage() {
       if (dateToFilter) params.set("dateTo", dateToFilter);
 
       const res = await apiFetch(`/api/desktop/reports?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to load reports");
+      if (!res.ok) throw new Error(t("loadFailed"));
       const body = (await res.json()) as ReportsResponse;
       const meta = body.meta ?? body.pagination ?? null;
       setRows(body.data.rows ?? []);
       setTotals(body.data.totals ?? { sent: 0, opened: 0, clicked: 0 });
       setPagination(meta);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load reports");
+      setError(err instanceof Error ? err.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [apiFetch, section, page, campaignFilter, dateFromFilter, dateToFilter]);
+  }, [apiFetch, section, page, campaignFilter, dateFromFilter, dateToFilter, t]);
 
   useEffect(() => {
     if (!user) return;
@@ -183,28 +197,28 @@ export default function MailerReportsPage() {
           dateTo: dateToFilter || undefined,
         }),
       });
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) throw new Error(t("exportFailed"));
       const body = (await res.json()) as ExportResponse;
       const data = body.data;
 
       if (data.mode === "direct" && data.downloadUrl) {
         window.location.href = data.downloadUrl;
-        setExportInfo("Download file");
+        setExportInfo(t("downloadFile"));
         setExportDownloadUrl(data.downloadUrl);
       } else {
-        setExportInfo("Preparing export...");
+        setExportInfo(t("preparingExport"));
         const poll = async () => {
           const statusRes = await apiFetch(data.statusUrl);
           if (!statusRes.ok) return;
           const statusBody = (await statusRes.json()) as ExportJobStatusResponse;
           const status = statusBody.data.status;
           if (status === "COMPLETED" && statusBody.data.downloadUrl) {
-            setExportInfo("Download file");
+            setExportInfo(t("downloadFile"));
             setExportDownloadUrl(statusBody.data.downloadUrl);
             return;
           }
           if (status === "FAILED") {
-            setError(statusBody.data.error || "Export failed");
+            setError(statusBody.data.error || t("exportFailed"));
             return;
           }
           setTimeout(() => void poll(), 2000);
@@ -212,60 +226,128 @@ export default function MailerReportsPage() {
         setTimeout(() => void poll(), 2000);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Export failed");
+      setError(err instanceof Error ? err.message : t("exportFailed"));
     } finally {
       setExporting(false);
     }
   }
 
+  function resetFilters() {
+    setCampaignFilter("");
+    setDateFromFilter("");
+    setDateToFilter("");
+    setPage(1);
+  }
+
+  const hasFilters = campaignFilter !== "" || dateFromFilter !== "" || dateToFilter !== "";
+  const hasAnyTotals = totals.sent + totals.opened + totals.clicked > 0;
+
+  const selectClass = cn(
+    "h-11 w-full rounded-lg border border-border/80 bg-background/80 px-3 text-sm",
+    "outline-none transition-colors hover:border-border",
+    "focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/30",
+  );
+
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Sent, opened, and clicked activity with quick export.
-          </p>
-        </div>
+    <div className="mx-auto max-w-6xl space-y-6 lg:space-y-8">
+      <PageHeader
+        title={t("title")}
+        description={t("description")}
+        actions={
+          <Button
+            size="md"
+            onClick={() => void handleExport()}
+            loading={exporting}
+            leftIcon={<Download className="h-4 w-4" />}
+          >
+            {t("exportAction")}
+          </Button>
+        }
+      />
+
+      {error && (
+        <Alert variant="destructive" onDismiss={() => setError("")}>
+          {error}
+        </Alert>
+      )}
+
+      {/* KPI strip */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <MetricCard
+          label={t("summary.sent")}
+          value={loading ? "—" : formatNumber(totals.sent)}
+          icon={<Mail className="h-4 w-4" strokeWidth={2.2} />}
+          tone="primary"
+        />
+        <MetricCard
+          label={t("summary.opened")}
+          value={loading ? "—" : formatNumber(totals.opened)}
+          icon={<Eye className="h-4 w-4" strokeWidth={2.2} />}
+          tone="success"
+        />
+        <MetricCard
+          label={t("summary.clicked")}
+          value={loading ? "—" : formatNumber(totals.clicked)}
+          icon={<MousePointerClick className="h-4 w-4" strokeWidth={2.2} />}
+          tone="accent"
+        />
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <Card className="p-4" hover={false}>
-          <div className="text-xs text-muted-foreground">Sent</div>
-          <div className="mt-2 flex items-center gap-2 text-2xl font-semibold">
-            <Mail className="h-5 w-5 text-primary" />
-            {totals.sent}
+      {/* Filters + Export controls */}
+      <SectionCard
+        title={t("filtersTitle")}
+        actions={
+          <div className="flex items-center gap-2">
+            <select
+              value={exportSection}
+              onChange={(e) => setExportSection(e.target.value as ExportSection)}
+              className={cn(selectClass, "h-9 w-auto text-[12.5px]")}
+              aria-label={t("exportSectionLabel")}
+            >
+              <option value="SENT">{t("tabs.sent")}</option>
+              <option value="OPENED">{t("tabs.opened")}</option>
+              <option value="CLICKED">{t("tabs.clicked")}</option>
+              <option value="ALL">{t("exportSectionAll")}</option>
+            </select>
+            <select
+              value={exportFormat}
+              onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
+              className={cn(selectClass, "h-9 w-auto text-[12.5px]")}
+              aria-label={t("exportFormatLabel")}
+            >
+              <option value="CSV">CSV</option>
+              <option value="XLSX">Excel (.xlsx)</option>
+            </select>
+            {exportDownloadUrl && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  window.location.href = exportDownloadUrl;
+                }}
+                leftIcon={<Download className="h-3.5 w-3.5" />}
+              >
+                {t("downloadFile")}
+              </Button>
+            )}
+            {exportInfo && !exportDownloadUrl && (
+              <span className="text-[12.5px] text-muted-foreground">{exportInfo}</span>
+            )}
           </div>
-        </Card>
-        <Card className="p-4" hover={false}>
-          <div className="text-xs text-muted-foreground">Opened</div>
-          <div className="mt-2 flex items-center gap-2 text-2xl font-semibold">
-            <Eye className="h-5 w-5 text-primary" />
-            {totals.opened}
-          </div>
-        </Card>
-        <Card className="p-4" hover={false}>
-          <div className="text-xs text-muted-foreground">Clicked</div>
-          <div className="mt-2 flex items-center gap-2 text-2xl font-semibold">
-            <MousePointerClick className="h-5 w-5 text-primary" />
-            {totals.clicked}
-          </div>
-        </Card>
-      </div>
-
-      <Card className="mb-4 p-4" hover={false}>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-          <label className="grid gap-1 text-sm xl:col-span-2">
-            <span className="font-medium">Campaign</span>
+        }
+      >
+        <div className="grid gap-3 md:grid-cols-[2fr_1fr_1fr_auto]">
+          <label className="grid gap-1.5 text-sm">
+            <span className="font-medium text-foreground">{t("campaignFilterLabel")}</span>
             <select
               value={campaignFilter}
               onChange={(e) => {
                 setCampaignFilter(e.target.value);
                 setPage(1);
               }}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+              className={selectClass}
             >
-              <option value="">All campaigns</option>
+              <option value="">{t("allCampaigns")}</option>
               {campaignOptions.map((campaign) => (
                 <option key={campaign.id} value={campaign.id}>
                   {campaign.name}
@@ -273,213 +355,201 @@ export default function MailerReportsPage() {
               ))}
             </select>
           </label>
-
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">From</span>
-            <input
+          <label className="grid gap-1.5 text-sm">
+            <span className="font-medium text-foreground">{t("fromLabel")}</span>
+            <Input
               type="date"
               value={dateFromFilter}
               onChange={(e) => {
                 setDateFromFilter(e.target.value);
                 setPage(1);
               }}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
             />
           </label>
-
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">To</span>
-            <input
+          <label className="grid gap-1.5 text-sm">
+            <span className="font-medium text-foreground">{t("toLabel")}</span>
+            <Input
               type="date"
               value={dateToFilter}
               onChange={(e) => {
                 setDateToFilter(e.target.value);
                 setPage(1);
               }}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
             />
           </label>
-
-          <div className="flex items-end">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setCampaignFilter("");
-                setDateFromFilter("");
-                setDateToFilter("");
-                setPage(1);
-              }}
-            >
-              Reset
+          <div className="flex items-end gap-2">
+            <Button onClick={() => void loadReports()} size="md" className="min-h-11 flex-1">
+              {t("applyFilters")}
             </Button>
-          </div>
-
-          <div className="flex items-end">
-            <Button onClick={() => void loadReports()}>Apply</Button>
-          </div>
-        </div>
-      </Card>
-
-      <Card className="mb-4 p-4" hover={false}>
-        <div className="grid gap-3 md:grid-cols-4">
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Export section</span>
-            <select
-              value={exportSection}
-              onChange={(e) => setExportSection(e.target.value as ExportSection)}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
-            >
-              <option value="SENT">Sent</option>
-              <option value="OPENED">Opened</option>
-              <option value="CLICKED">Clicked</option>
-              <option value="ALL">All activity</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Format</span>
-            <select
-              value={exportFormat}
-              onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
-            >
-              <option value="CSV">CSV</option>
-              <option value="XLSX">Excel (.xlsx)</option>
-            </select>
-          </label>
-          <div className="flex items-end">
-            <Button onClick={handleExport} loading={exporting}>
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-          </div>
-          <div className="flex items-end gap-2 text-sm text-muted-foreground">
-            <span>{exportInfo}</span>
-            {exportDownloadUrl && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  window.location.href = exportDownloadUrl;
-                }}
-              >
-                Download file
+            {hasFilters && (
+              <Button variant="ghost" size="md" onClick={resetFilters} className="min-h-11">
+                {t("resetFilters")}
               </Button>
             )}
           </div>
         </div>
-      </Card>
+      </SectionCard>
 
-      <Card className="p-4" hover={false}>
-        <div className="mb-3 flex items-center gap-2">
-          {(Object.keys(SECTION_LABEL) as Section[]).map((item) => (
-            <Button
-              key={item}
-              size="sm"
-              variant={section === item ? "primary" : "outline"}
-              onClick={() => {
-                setSection(item);
-                setPage(1);
-              }}
-            >
-              {SECTION_LABEL[item]}
-            </Button>
-          ))}
+      {/* Activity table */}
+      <SectionCard padded={false}>
+        {/* Tabs */}
+        <div className="border-b border-border/70">
+          <Toolbar bare className="px-5 py-2.5 sm:px-6">
+            {(["SENT", "OPENED", "CLICKED"] as Section[]).map((item) => {
+              const active = section === item;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => {
+                    setSection(item);
+                    setPage(1);
+                  }}
+                  aria-pressed={active}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors",
+                    active
+                      ? "bg-primary/10 text-primary ring-1 ring-primary/20"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  )}
+                >
+                  {t(`tabs.${item.toLowerCase()}`)}
+                </button>
+              );
+            })}
+          </Toolbar>
         </div>
 
-        {error && (
-          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {error}
-          </div>
-        )}
-
         {loading ? (
-          <PageSpinner />
+          <div className="p-8">
+            <PageSpinner />
+          </div>
+        ) : !hasAnyTotals && rows.length === 0 && !hasFilters ? (
+          <div className="p-5 sm:p-6">
+            <EmptyState
+              icon={<Mail strokeWidth={1.8} />}
+              title={t("noActivityTitle")}
+              description={t("noActivityDescription")}
+            />
+          </div>
         ) : rows.length === 0 ? (
-          <EmptyState title="No activity found" description="Try changing filters." />
+          <div className="p-5 sm:p-6">
+            <EmptyState
+              icon={<Search strokeWidth={1.8} />}
+              title={t("noResultsTitle")}
+              description={t("noResultsDescription")}
+              action={hasFilters ? { label: t("resetFilters"), onClick: resetFilters } : undefined}
+            />
+          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Email</th>
-                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Campaign</th>
-                  {section === "SENT" && (
-                    <>
-                      <th className="pb-2 pr-4 font-medium text-muted-foreground">Sender</th>
-                      <th className="pb-2 pr-4 font-medium text-muted-foreground">Sent at</th>
-                    </>
-                  )}
-                  {section === "OPENED" && (
-                    <>
-                      <th className="pb-2 pr-4 font-medium text-muted-foreground">First opened</th>
-                      <th className="pb-2 pr-4 font-medium text-muted-foreground">Opens count</th>
-                    </>
-                  )}
-                  {section === "CLICKED" && (
-                    <>
-                      <th className="pb-2 pr-4 font-medium text-muted-foreground">Clicked at</th>
-                      <th className="pb-2 pr-4 font-medium text-muted-foreground">Link</th>
-                    </>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {section === "SENT" &&
-                  (rows as SentRow[]).map((row, index) => (
-                    <tr key={`${row.email}-${row.sentAt}-${index}`} className="border-b border-border/50">
-                      <td className="py-2 pr-4">{row.email}</td>
-                      <td className="py-2 pr-4">{row.campaign}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{row.sender || "—"}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{formatGeorgianDateTime(row.sentAt)}</td>
-                    </tr>
-                  ))}
-                {section === "OPENED" &&
-                  (rows as OpenedRow[]).map((row, index) => (
-                    <tr key={`${row.email}-${row.firstOpenedAt}-${index}`} className="border-b border-border/50">
-                      <td className="py-2 pr-4">{row.email}</td>
-                      <td className="py-2 pr-4">{row.campaign}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{formatGeorgianDateTime(row.firstOpenedAt)}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{row.opensCount}</td>
-                    </tr>
-                  ))}
-                {section === "CLICKED" &&
-                  (rows as ClickedRow[]).map((row, index) => (
-                    <tr key={`${row.email}-${row.clickedAt}-${index}`} className="border-b border-border/50">
-                      <td className="py-2 pr-4">{row.email}</td>
-                      <td className="py-2 pr-4">{row.campaign}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{formatGeorgianDateTime(row.clickedAt)}</td>
-                      <td className="max-w-[320px] truncate py-2 pr-4 text-muted-foreground">{row.link || "—"}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-border/60 bg-[hsl(var(--muted)/0.45)] text-left text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    <th className="px-6 py-2.5">{t("columns.email")}</th>
+                    <th className="px-3 py-2.5">{t("columns.campaign")}</th>
+                    {section === "SENT" && (
+                      <>
+                        <th className="px-3 py-2.5">{t("columns.sender")}</th>
+                        <th className="px-3 py-2.5 text-right">{t("columns.sentAt")}</th>
+                      </>
+                    )}
+                    {section === "OPENED" && (
+                      <>
+                        <th className="px-3 py-2.5">{t("columns.firstOpened")}</th>
+                        <th className="px-3 py-2.5 text-right tabular-nums">{t("columns.opensCount")}</th>
+                      </>
+                    )}
+                    {section === "CLICKED" && (
+                      <>
+                        <th className="px-3 py-2.5">{t("columns.clickedAt")}</th>
+                        <th className="px-3 py-2.5">{t("columns.link")}</th>
+                      </>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {section === "SENT" &&
+                    (rows as SentRow[]).map((row, index) => (
+                      <tr
+                        key={`${row.email}-${row.sentAt}-${index}`}
+                        className="transition-colors hover:bg-[hsl(var(--muted)/0.5)]"
+                      >
+                        <td className="px-6 py-3 font-medium text-foreground">{row.email}</td>
+                        <td className="px-3 py-3 text-foreground">{row.campaign}</td>
+                        <td className="px-3 py-3 text-muted-foreground">{row.sender || "—"}</td>
+                        <td className="px-3 py-3 text-right text-muted-foreground">
+                          {formatGeorgianDateTime(row.sentAt)}
+                        </td>
+                      </tr>
+                    ))}
+                  {section === "OPENED" &&
+                    (rows as OpenedRow[]).map((row, index) => (
+                      <tr
+                        key={`${row.email}-${row.firstOpenedAt}-${index}`}
+                        className="transition-colors hover:bg-[hsl(var(--muted)/0.5)]"
+                      >
+                        <td className="px-6 py-3 font-medium text-foreground">{row.email}</td>
+                        <td className="px-3 py-3 text-foreground">{row.campaign}</td>
+                        <td className="px-3 py-3 text-muted-foreground">
+                          {formatGeorgianDateTime(row.firstOpenedAt)}
+                        </td>
+                        <td className="px-3 py-3 text-right tabular-nums text-foreground">
+                          {row.opensCount}
+                        </td>
+                      </tr>
+                    ))}
+                  {section === "CLICKED" &&
+                    (rows as ClickedRow[]).map((row, index) => (
+                      <tr
+                        key={`${row.email}-${row.clickedAt}-${index}`}
+                        className="transition-colors hover:bg-[hsl(var(--muted)/0.5)]"
+                      >
+                        <td className="px-6 py-3 font-medium text-foreground">{row.email}</td>
+                        <td className="px-3 py-3 text-foreground">{row.campaign}</td>
+                        <td className="px-3 py-3 text-muted-foreground">
+                          {formatGeorgianDateTime(row.clickedAt)}
+                        </td>
+                        <td className="max-w-[320px] truncate px-3 py-3 text-muted-foreground">
+                          {row.link || "—"}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
 
-        {pagination && totalPages > 1 && (
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((prev) => prev - 1)}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Page {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= totalPages}
-              onClick={() => setPage((prev) => prev + 1)}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+            {pagination && totalPages > 1 && (
+              <div className="flex items-center justify-end gap-2 border-t border-border/60 bg-[hsl(var(--muted)/0.35)] px-5 py-3 sm:px-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((prev) => prev - 1)}
+                  aria-label="Previous page"
+                  className="min-h-9 px-3"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="min-w-[6rem] text-center text-[13px] tabular-nums text-muted-foreground">
+                  {t("pageInfo", { page, pages: totalPages })}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((prev) => prev + 1)}
+                  aria-label="Next page"
+                  className="min-h-9 px-3"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </>
         )}
-      </Card>
+      </SectionCard>
     </div>
   );
 }

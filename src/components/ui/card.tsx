@@ -59,7 +59,10 @@ export function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDiv
   );
 }
 
-// Gradient Card variant
+/**
+ * @deprecated Mailer visual spec forbids gradients. Prefer `SectionCard` instead.
+ * Kept for backwards compatibility with non-mailer surfaces inherited from the monolith.
+ */
 export function GradientCard({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
@@ -76,7 +79,10 @@ export function GradientCard({ className, ...props }: React.HTMLAttributes<HTMLD
   );
 }
 
-// Interactive Card with glow effect
+/**
+ * @deprecated Mailer visual spec forbids glow effects. Prefer `SectionCard` instead.
+ * Kept for backwards compatibility with non-mailer surfaces inherited from the monolith.
+ */
 export function GlowCard({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div

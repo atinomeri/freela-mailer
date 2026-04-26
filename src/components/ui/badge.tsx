@@ -96,7 +96,12 @@ export function Badge({
   );
 }
 
-// Status badge with animated dot
+// Status badge with animated dot.
+//
+// @deprecated For mailer domain statuses (campaigns, contacts, sender accounts,
+// payments) use `StatusPill` from `./status-pill` instead — it provides a typed
+// status enum with one canonical color mapping. This `StatusBadge` is for
+// presence indicators (online/away/busy) only and is not used by mailer pages.
 interface StatusBadgeProps {
   status: "online" | "offline" | "away" | "busy";
   showLabel?: boolean;

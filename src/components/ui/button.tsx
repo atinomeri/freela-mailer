@@ -1,6 +1,7 @@
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { Children, cloneElement, isValidElement, type ReactElement } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive" | "outline" | "link";
 type ButtonSize = "sm" | "md" | "lg" | "icon";
@@ -11,6 +12,13 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   loading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  /**
+   * When true, renders the only child as the trigger element instead of a <button>.
+   * Useful for wrapping <Link> components without nesting <button><a>. The child
+   * receives merged className. `loading`, `leftIcon`, `rightIcon` are ignored when
+   * asChild is true — put them inside the child instead.
+   */
+  asChild?: boolean;
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -32,6 +40,13 @@ const sizeClasses: Record<ButtonSize, string> = {
   icon: "h-10 w-10"
 };
 
+const baseClasses = cn(
+  "btn-haptic inline-flex items-center justify-center whitespace-nowrap rounded-xl font-semibold",
+  "transition-all duration-250 ease-out will-change-transform",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+  "disabled:pointer-events-none disabled:opacity-50",
+);
+
 export function Button({
   className,
   variant = "primary",
@@ -40,20 +55,25 @@ export function Button({
   disabled,
   leftIcon,
   rightIcon,
+  asChild = false,
   children,
   ...props
 }: ButtonProps) {
+  const composed = cn(baseClasses, variantClasses[variant], sizeClasses[size], className);
+
+  if (asChild) {
+    if (!isValidElement(children)) {
+      return null;
+    }
+    const child = Children.only(children) as ReactElement<{ className?: string }>;
+    return cloneElement(child, {
+      className: cn(composed, child.props.className),
+    });
+  }
+
   return (
     <button
-      className={cn(
-        "btn-haptic inline-flex items-center justify-center whitespace-nowrap rounded-xl font-semibold",
-        "transition-all duration-250 ease-out will-change-transform",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        "disabled:pointer-events-none disabled:opacity-50",
-        variantClasses[variant],
-        sizeClasses[size],
-        className
-      )}
+      className={composed}
       disabled={disabled || loading}
       {...props}
     >
@@ -88,14 +108,7 @@ export function ButtonLink({
 }: ButtonLinkProps) {
   return (
     <Link
-      className={cn(
-        "btn-haptic inline-flex items-center justify-center whitespace-nowrap rounded-xl font-semibold",
-        "transition-all duration-250 ease-out will-change-transform",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        variantClasses[variant],
-        sizeClasses[size],
-        className
-      )}
+      className={cn(baseClasses, variantClasses[variant], sizeClasses[size], className)}
       {...props}
     >
       {leftIcon && <span className="shrink-0">{leftIcon}</span>}

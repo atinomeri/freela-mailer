@@ -1,16 +1,31 @@
 "use client";
 
 import { useMailerAuth } from "@/lib/mailer-auth";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui/card";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button, ButtonLink } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle2, AlertTriangle, ShieldAlert } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionCard } from "@/components/ui/section-card";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Send,
+  TriangleAlert,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { MailerLoginPage } from "../../login-page";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 
 interface ApiErrorShape {
   error?: string | { message?: string };
@@ -37,13 +52,8 @@ interface PreflightResult {
   checkedAt: string;
 }
 
-const STEPS = [
-  "Details",
-  "Audience",
-  "Content",
-  "Preflight",
-  "Send",
-] as const;
+type StepKey = "details" | "recipients" | "content" | "review";
+const STEPS: StepKey[] = ["details", "recipients", "content", "review"];
 
 const HOURS_24 = Array.from({ length: 24 }, (_, idx) => String(idx).padStart(2, "0"));
 const MINUTES_60 = Array.from({ length: 60 }, (_, idx) => String(idx).padStart(2, "0"));
@@ -83,6 +93,14 @@ function localDateAndTimeToIso(datePart: string, timePart: string): string | nul
   return parsed.toISOString();
 }
 
+function readApiError(body: ApiErrorShape | null, fallback: string): string {
+  const apiError = body?.error;
+  if (typeof apiError === "string") return apiError;
+  if (typeof apiError?.message === "string") return apiError.message;
+  if (typeof body?.message === "string") return body.message;
+  return fallback;
+}
+
 function TimeSelect24({
   value,
   onChange,
@@ -91,13 +109,19 @@ function TimeSelect24({
   onChange: (next: string) => void;
 }) {
   const { hour, minute } = parseTimeParts(value);
+  const selectClass = cn(
+    "h-11 rounded-lg border border-border/80 bg-background/80 px-3 text-sm",
+    "outline-none transition-colors hover:border-border",
+    "focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/30",
+  );
 
   return (
     <div className="flex items-center gap-2">
       <select
         value={hour}
         onChange={(e) => onChange(buildHHmm(e.target.value, minute))}
-        className="h-11 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+        className={selectClass}
+        aria-label="Hours"
       >
         {HOURS_24.map((h) => (
           <option key={h} value={h}>
@@ -109,7 +133,8 @@ function TimeSelect24({
       <select
         value={minute}
         onChange={(e) => onChange(buildHHmm(hour, e.target.value))}
-        className="h-11 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+        className={selectClass}
+        aria-label="Minutes"
       >
         {MINUTES_60.map((m) => (
           <option key={m} value={m}>
@@ -121,14 +146,102 @@ function TimeSelect24({
   );
 }
 
+interface StepperProps {
+  current: number; // 1-indexed
+  steps: Array<{ key: StepKey; label: string }>;
+  onSelect: (step: number) => void;
+}
+
+function Stepper({ current, steps, onSelect }: StepperProps) {
+  const t = useTranslations("mailer.newCampaign");
+  return (
+    <ol
+      aria-label="Wizard steps"
+      className="grid gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4"
+    >
+      {steps.map((step, idx) => {
+        const num = idx + 1;
+        const status = num < current ? "done" : num === current ? "active" : "pending";
+        const clickable = num <= current;
+        return (
+          <li key={step.key} className="min-w-0">
+            <button
+              type="button"
+              onClick={() => clickable && onSelect(num)}
+              disabled={!clickable}
+              aria-current={status === "active" ? "step" : undefined}
+              className={cn(
+                "group flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors",
+                status === "active" &&
+                  "border-primary/40 bg-primary/5 shadow-[0_1px_2px_hsl(var(--foreground)/0.04)]",
+                status === "done" &&
+                  "border-border/70 bg-card hover:border-border cursor-pointer",
+                status === "pending" &&
+                  "cursor-not-allowed border-dashed border-border/60 bg-card/40 opacity-60",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold tabular-nums ring-1",
+                  status === "active" && "bg-primary text-primary-foreground ring-primary/30",
+                  status === "done" && "bg-success/10 text-success ring-success/30",
+                  status === "pending" && "bg-muted text-muted-foreground ring-border",
+                )}
+                aria-hidden
+              >
+                {status === "done" ? <Check className="h-3.5 w-3.5" /> : num}
+              </span>
+              <div className="min-w-0">
+                <div className="text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  {t("stepNumber", { step: num })}
+                </div>
+                <div className="truncate text-[13px] font-semibold tracking-tight text-foreground">
+                  {step.label}
+                </div>
+              </div>
+            </button>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function CheckStatusBadge({ status, t }: { status: PreflightResult["status"]; t: ReturnType<typeof useTranslations> }) {
+  if (status === "good") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-success/25 bg-success/10 px-2.5 py-1 text-[12px] font-medium text-success">
+        <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2.4} />
+        {t("review.checksOk")}
+      </span>
+    );
+  }
+  if (status === "warning") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-[12px] font-medium text-warning">
+        <TriangleAlert className="h-3.5 w-3.5" strokeWidth={2.4} />
+        {t("review.checksWarn")}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-destructive/25 bg-destructive/10 px-2.5 py-1 text-[12px] font-medium text-destructive">
+      <AlertCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
+      {t("review.checksFail")}
+    </span>
+  );
+}
+
 export default function NewCampaignPage() {
   const { user, apiFetch } = useMailerAuth();
   const router = useRouter();
   const t = useTranslations("mailer");
+  const tw = useTranslations("mailer.newCampaign");
 
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [sampleCreating, setSampleCreating] = useState(false);
 
   const [name, setName] = useState("");
@@ -153,7 +266,9 @@ export default function NewCampaignPage() {
   const [scheduledTime, setScheduledTime] = useState("10:00");
   const [confirmReady, setConfirmReady] = useState(false);
 
-  async function loadContactLists() {
+  const isSampleSeedAllowed = process.env.NODE_ENV !== "production";
+
+  const loadContactLists = useCallback(async () => {
     try {
       const listsRes = await apiFetch("/api/desktop/contact-lists?page=1&limit=100");
       if (!listsRes.ok) return;
@@ -162,7 +277,7 @@ export default function NewCampaignPage() {
     } catch {
       // keep current state
     }
-  }
+  }, [apiFetch]);
 
   useEffect(() => {
     if (!user) return;
@@ -197,7 +312,6 @@ export default function NewCampaignPage() {
     [selectedLists],
   );
   const hasAudienceLists = contactLists.some((list) => Number(list.contactCount ?? 0) > 0);
-  const isSampleSeedAllowed = process.env.NODE_ENV !== "production";
 
   const detailsValid = useMemo(
     () => name.trim().length > 0 && senderEmail.includes("@"),
@@ -228,57 +342,64 @@ export default function NewCampaignPage() {
     if (currentStep === 1) return detailsValid;
     if (currentStep === 2) return audienceValid;
     if (currentStep === 3) return contentValid;
-    if (currentStep === 4) return Boolean(preflight) && !preflightLoading;
     return true;
   };
 
-  async function runPreflight(force = false) {
-    if (!detailsValid || !audienceValid || !contentValid) return;
-    if (!force && preflightKey === preflightFingerprint && preflight) return;
+  const runPreflight = useCallback(
+    async (force = false) => {
+      if (!detailsValid || !audienceValid || !contentValid) return;
+      if (!force && preflightKey === preflightFingerprint && preflight) return;
 
-    setPreflightLoading(true);
-    setError("");
-    try {
-      const res = await apiFetch("/api/desktop/campaigns/preflight", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          senderEmail,
-          subject,
-          previewText,
-          html,
-          recipientsCount,
-        }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
-        const apiError = body?.error;
-        const message =
-          typeof apiError === "string"
-            ? apiError
-            : typeof apiError?.message === "string"
-              ? apiError.message
-              : typeof body?.message === "string"
-                ? body.message
-                : "Failed to run preflight";
-        throw new Error(message);
+      setPreflightLoading(true);
+      setError("");
+      try {
+        const res = await apiFetch("/api/desktop/campaigns/preflight", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            senderEmail,
+            subject,
+            previewText,
+            html,
+            recipientsCount,
+          }),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
+          throw new Error(readApiError(body, t("errors.createCampaignFailed")));
+        }
+        const body = (await res.json()) as { data: PreflightResult };
+        setPreflight(body.data);
+        setPreflightKey(preflightFingerprint);
+      } catch (err) {
+        setPreflight(null);
+        setError(err instanceof Error ? err.message : t("errors.createCampaignFailed"));
+      } finally {
+        setPreflightLoading(false);
       }
-      const body = (await res.json()) as { data: PreflightResult };
-      setPreflight(body.data);
-      setPreflightKey(preflightFingerprint);
-    } catch (err) {
-      setPreflight(null);
-      setError(err instanceof Error ? err.message : "Failed to run preflight");
-    } finally {
-      setPreflightLoading(false);
-    }
-  }
+    },
+    [
+      apiFetch,
+      audienceValid,
+      contentValid,
+      detailsValid,
+      html,
+      preflight,
+      preflightFingerprint,
+      preflightKey,
+      previewText,
+      recipientsCount,
+      senderEmail,
+      subject,
+      t,
+    ],
+  );
 
+  // Auto-run preflight once user reaches the Review step (or any field changes while there).
   useEffect(() => {
     if (step !== 4) return;
     void runPreflight();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, preflightFingerprint]);
+  }, [step, preflightFingerprint, runPreflight]);
 
   if (!user) return <MailerLoginPage />;
 
@@ -295,16 +416,7 @@ export default function NewCampaignPage() {
     });
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
-      const apiError = body?.error;
-      const message =
-        typeof apiError === "string"
-          ? apiError
-          : typeof apiError?.message === "string"
-            ? apiError.message
-            : typeof body?.message === "string"
-              ? body.message
-              : "Failed to prepare audience";
-      throw new Error(message);
+      throw new Error(readApiError(body, t("errors.assignListFailed")));
     }
     const body = (await res.json()) as { data: { id: string } };
     return body.data.id;
@@ -319,38 +431,84 @@ export default function NewCampaignPage() {
       });
       const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
       if (!res.ok) {
-        const apiError = body?.error;
-        const message =
-          typeof apiError === "string"
-            ? apiError
-            : typeof apiError?.message === "string"
-              ? apiError.message
-              : typeof body?.message === "string"
-                ? body.message
-                : "Failed to create sample contacts";
-        throw new Error(message);
+        throw new Error(readApiError(body, t("errors.createListFailed")));
       }
-
       await loadContactLists();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create sample contacts");
+      setError(err instanceof Error ? err.message : t("errors.createListFailed"));
     } finally {
       setSampleCreating(false);
+    }
+  }
+
+  /**
+   * Persists the campaign without sending or scheduling.
+   * Used by `Send now`, `Schedule`, and `Save as draft` — the difference is
+   * what we do (or don't do) afterwards.
+   */
+  async function persistCampaign(scheduledAtIso: string | null): Promise<string> {
+    const audienceListId = await resolveAudienceListId();
+    const createRes = await apiFetch("/api/desktop/campaigns", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: name.trim(),
+        subject: subject.trim(),
+        previewText: previewText.trim() || undefined,
+        senderName: senderName.trim() || undefined,
+        senderEmail: senderEmail.trim() || undefined,
+        html: html.trim(),
+        contactListId: audienceListId,
+        scheduleMode: "ONCE",
+        scheduledAt: scheduledAtIso || undefined,
+        preflight: preflight
+          ? {
+              status: preflight.status.toUpperCase(),
+              recommendations: preflight.recommendations,
+              checkedAt: preflight.checkedAt,
+            }
+          : undefined,
+      }),
+    });
+
+    if (!createRes.ok) {
+      const body = (await createRes.json().catch(() => null)) as ApiErrorShape | null;
+      throw new Error(readApiError(body, t("errors.createCampaignFailed")));
+    }
+
+    const createdBody = await createRes.json();
+    return createdBody.data?.id as string;
+  }
+
+  async function handleSaveDraft() {
+    setError("");
+    if (!detailsValid || !audienceValid || !contentValid) {
+      setError(tw("errors.completeRequired"));
+      return;
+    }
+    setSavingDraft(true);
+    try {
+      const campaignId = await persistCampaign(null);
+      router.push(`/campaigns/${campaignId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("errors.createCampaignFailed"));
+    } finally {
+      setSavingDraft(false);
     }
   }
 
   async function handleFinish() {
     setError("");
     if (!detailsValid || !audienceValid || !contentValid) {
-      setError("Complete all required steps before sending.");
+      setError(tw("errors.completeRequired"));
       return;
     }
     if (!preflight || preflightLoading || preflightKey !== preflightFingerprint) {
-      setError("Run preflight check before sending.");
+      setError(tw("review.checksRunning"));
       return;
     }
     if (!confirmReady) {
-      setError("Please confirm the campaign is ready to send.");
+      setError(tw("errors.confirmRequired"));
       return;
     }
 
@@ -360,51 +518,13 @@ export default function NewCampaignPage() {
         : null;
 
     if (sendMode === "schedule" && !scheduledAtIso) {
-      setError(t("errors.invalidScheduleDateTime"));
+      setError(tw("errors.scheduleDateRequired"));
       return;
     }
 
     setSaving(true);
     try {
-      const audienceListId = await resolveAudienceListId();
-
-      const createRes = await apiFetch("/api/desktop/campaigns", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          subject: subject.trim(),
-          previewText: previewText.trim() || undefined,
-          senderName: senderName.trim() || undefined,
-          senderEmail: senderEmail.trim() || undefined,
-          html: html.trim(),
-          contactListId: audienceListId,
-          scheduleMode: "ONCE",
-          scheduledAt: sendMode === "schedule" ? scheduledAtIso || undefined : undefined,
-          preflight: {
-            status: preflight.status.toUpperCase(),
-            recommendations: preflight.recommendations,
-            checkedAt: preflight.checkedAt,
-          },
-        }),
-      });
-
-      if (!createRes.ok) {
-        const body = (await createRes.json().catch(() => null)) as ApiErrorShape | null;
-        const apiError = body?.error;
-        const message =
-          typeof apiError === "string"
-            ? apiError
-            : typeof apiError?.message === "string"
-              ? apiError.message
-              : typeof body?.message === "string"
-                ? body.message
-                : t("errors.createCampaignFailed");
-        throw new Error(message);
-      }
-
-      const createdBody = await createRes.json();
-      const campaignId = createdBody.data?.id as string;
+      const campaignId = await persistCampaign(scheduledAtIso);
 
       if (sendMode === "now") {
         const sendRes = await apiFetch(`/api/desktop/campaigns/${campaignId}/send`, {
@@ -412,211 +532,190 @@ export default function NewCampaignPage() {
         });
         if (!sendRes.ok) {
           const body = (await sendRes.json().catch(() => null)) as ApiErrorShape | null;
-          const apiError = body?.error;
-          const message =
-            typeof apiError === "string"
-              ? apiError
-              : typeof apiError?.message === "string"
-                ? apiError.message
-                : typeof body?.message === "string"
-                  ? body.message
-                  : t("errors.sendCampaignFailed");
-          throw new Error(message);
+          throw new Error(readApiError(body, t("errors.sendCampaignFailed")));
         }
       }
 
       router.push(`/campaigns/${campaignId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to finish campaign");
+      setError(err instanceof Error ? err.message : t("errors.createCampaignFailed"));
     } finally {
       setSaving(false);
     }
   }
 
-  function statusBadge(status: PreflightResult["status"]) {
-    if (status === "good") {
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2 py-1 text-xs text-success">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          good
-        </span>
-      );
-    }
-    if (status === "warning") {
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/10 px-2 py-1 text-xs text-warning">
-          <AlertTriangle className="h-3.5 w-3.5" />
-          warning
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive">
-        <ShieldAlert className="h-3.5 w-3.5" />
-        critical
-      </span>
-    );
-  }
+  const stepDefs: Array<{ key: StepKey; label: string }> = STEPS.map((key) => ({
+    key,
+    label: tw(`steps.${key}`),
+  }));
+
+  const selectClass = cn(
+    "h-11 w-full rounded-lg border border-border/80 bg-background/80 px-3 text-sm",
+    "outline-none transition-colors hover:border-border",
+    "focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/30",
+  );
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-6">
+    <div className="mx-auto max-w-4xl space-y-6 lg:space-y-8">
+      <div className="space-y-3">
         <Link
           href="/campaigns"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-3.5 w-3.5" />
           {t("actions.backToCampaigns")}
         </Link>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">Campaign Wizard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Build your campaign in 5 simple steps.
-        </p>
+        <PageHeader title={tw("title")} description={tw("description")} />
       </div>
 
-      <Card className="mb-4 p-4" hover={false}>
-        <div className="grid gap-2 sm:grid-cols-5">
-          {STEPS.map((label, idx) => {
-            const number = idx + 1;
-            const active = step === number;
-            const done = step > number;
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => {
-                  if (number <= step) setStep(number);
-                }}
-                className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
-                  active
-                    ? "border-primary bg-primary/10"
-                    : done
-                      ? "border-success/40 bg-success/10"
-                      : "border-border bg-background"
-                }`}
-              >
-                <div className="text-xs text-muted-foreground">Step {number}</div>
-                <div className="font-medium">{label}</div>
-              </button>
-            );
-          })}
-        </div>
-      </Card>
+      <Stepper current={step} steps={stepDefs} onSelect={setStep} />
 
-      <Card className="p-6" hover={false}>
+      <SectionCard padded>
         {error && (
-          <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          <Alert variant="destructive" className="mb-5">
             {error}
-          </div>
+          </Alert>
         )}
 
+        {/* Step 1 — Details */}
         {step === 1 && (
-          <div className="grid gap-5">
-            <h2 className="text-lg font-semibold">Step 1: Details</h2>
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">{t("newCampaign.campaignNameLabel")}</span>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t("newCampaign.campaignNamePlaceholder")}
-              />
-            </label>
-            <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
+                {tw("steps.details")}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {tw("campaignNameHelp")}
+              </p>
+            </div>
+            <div className="space-y-4">
               <label className="grid gap-1.5 text-sm">
-                <span className="font-medium">{t("newCampaign.senderNameLabel")}</span>
+                <span className="font-medium text-foreground">{tw("campaignNameLabel")}</span>
                 <Input
-                  value={senderName}
-                  onChange={(e) => setSenderName(e.target.value)}
-                  placeholder={t("newCampaign.senderNamePlaceholder")}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={tw("campaignNamePlaceholder")}
+                  required
                 />
               </label>
-              <label className="grid gap-1.5 text-sm">
-                <span className="font-medium">{t("newCampaign.senderEmailLabel")}</span>
-                <Input
-                  value={senderEmail}
-                  onChange={(e) => setSenderEmail(e.target.value)}
-                  type="email"
-                  placeholder={t("newCampaign.senderEmailPlaceholder")}
-                />
-              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-foreground">{tw("senderNameLabel")}</span>
+                  <Input
+                    value={senderName}
+                    onChange={(e) => setSenderName(e.target.value)}
+                    placeholder={tw("senderNamePlaceholder")}
+                  />
+                </label>
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-foreground">{tw("senderEmailLabel")}</span>
+                  <Input
+                    value={senderEmail}
+                    onChange={(e) => setSenderEmail(e.target.value)}
+                    type="email"
+                    placeholder={tw("senderEmailPlaceholder")}
+                    required
+                  />
+                </label>
+              </div>
             </div>
           </div>
         )}
 
+        {/* Step 2 — Recipients */}
         {step === 2 && (
-          <div className="grid gap-5">
-            <h2 className="text-lg font-semibold">Step 2: Audience</h2>
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
+                {tw("audience.title")}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {tw("audience.description")}
+              </p>
+            </div>
+
             {!hasAudienceLists ? (
-              <div className="rounded-lg border border-dashed border-border/80 bg-muted/20 p-4">
-                <p className="text-sm font-medium">No contacts available for audience yet.</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Import contacts first, or create a small sample list for development testing.
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <ButtonLink href="/contacts" variant="outline">
-                    Import contacts
-                  </ButtonLink>
-                  {isSampleSeedAllowed && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      loading={sampleCreating}
-                      onClick={() => void handleCreateSampleList()}
-                    >
-                      Create sample list (test data)
-                    </Button>
-                  )}
+              <EmptyState
+                icon={<Users strokeWidth={1.8} />}
+                title={tw("audience.noListsTitle")}
+                description={tw("audience.noListsDescription")}
+                action={{ label: tw("audience.noListsAction"), href: "/contacts" }}
+                secondaryAction={
+                  isSampleSeedAllowed
+                    ? {
+                        label: sampleCreating ? t("actions.creating") : tw("audience.addSampleAction"),
+                        onClick: () => void handleCreateSampleList(),
+                      }
+                    : undefined
+                }
+              />
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  {contactLists.map((list) => {
+                    const checked = selectedListIds.includes(list.id);
+                    const isUsable = Number(list.contactCount ?? 0) > 0;
+                    return (
+                      <label
+                        key={list.id}
+                        className={cn(
+                          "flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors",
+                          isUsable
+                            ? checked
+                              ? "border-primary/40 bg-primary/5"
+                              : "border-border/70 bg-card hover:border-border"
+                            : "cursor-not-allowed border-border/60 bg-muted/30 opacity-70",
+                        )}
+                      >
+                        <span className="flex min-w-0 items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={!isUsable}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              setSelectedListIds((prev) =>
+                                isChecked
+                                  ? [...prev, list.id]
+                                  : prev.filter((id) => id !== list.id),
+                              );
+                            }}
+                            className="h-4 w-4 shrink-0 rounded border-border accent-primary"
+                          />
+                          <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-foreground">
+                            {list.name}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-[12.5px] tabular-nums text-muted-foreground">
+                          {tw("audience.listMembers", { count: Number(list.contactCount ?? 0) })}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-[hsl(var(--muted)/0.45)] px-4 py-3 text-[13px]">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="h-4 w-4" strokeWidth={2.2} />
+                    {tw("audience.selectedSummary", { count: recipientsCount })}
+                  </span>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {contactLists.map((list) => {
-                  const checked = selectedListIds.includes(list.id);
-                  const isValidList = Number(list.contactCount ?? 0) > 0;
-                  return (
-                    <label
-                      key={list.id}
-                      className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
-                        isValidList
-                          ? "border-border"
-                          : "border-border/60 bg-muted/30"
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={!isValidList}
-                          onChange={(e) => {
-                            const isChecked = e.target.checked;
-                            setSelectedListIds((prev) =>
-                              isChecked
-                                ? [...prev, list.id]
-                                : prev.filter((id) => id !== list.id),
-                            );
-                          }}
-                        />
-                        <span className="font-medium">{list.name}</span>
-                      </span>
-                      <span className="text-muted-foreground">
-                        {list.contactCount} recipients{!isValidList ? " (empty list)" : ""}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
             )}
-            <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-sm">
-              {recipientsCount} recipients selected
-            </div>
           </div>
         )}
 
+        {/* Step 3 — Content */}
         {step === 3 && (
-          <div className="grid gap-5">
-            <h2 className="text-lg font-semibold">Step 3: Content</h2>
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
+                {tw("steps.content")}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">{tw("emailSubjectHelp")}</p>
+            </div>
+
             <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">Template</span>
+              <span className="font-medium text-foreground">{tw("templateLabel")}</span>
               <select
                 value={templateId}
                 onChange={(e) => {
@@ -627,154 +726,217 @@ export default function NewCampaignPage() {
                   setSubject(tpl.subject);
                   setHtml(tpl.html);
                 }}
-                className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+                className={selectClass}
               >
-                <option value="">No template</option>
+                <option value="">{tw("templateNoneOption")}</option>
                 {templates.map((tpl) => (
                   <option key={tpl.id} value={tpl.id}>
-                    {tpl.name} ({tpl.category})
+                    {tpl.name}
                   </option>
                 ))}
               </select>
             </label>
 
             <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">{t("newCampaign.emailSubjectLabel")}</span>
+              <span className="font-medium text-foreground">{tw("emailSubjectLabel")}</span>
               <Input
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder={t("newCampaign.emailSubjectPlaceholder")}
+                placeholder={tw("emailSubjectPlaceholder")}
+                required
               />
             </label>
 
             <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">Preview text (optional)</span>
+              <span className="font-medium text-foreground">{tw("previewTextLabel")}</span>
               <Input
                 value={previewText}
                 onChange={(e) => setPreviewText(e.target.value)}
-                placeholder="Short inbox preview text"
+                placeholder={tw("previewTextPlaceholder")}
               />
+              <span className="text-[12px] text-muted-foreground">{tw("previewTextHelp")}</span>
             </label>
 
             <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">{t("newCampaign.htmlBodyLabel")}</span>
+              <span className="font-medium text-foreground">{tw("htmlBodyLabel")}</span>
               <Textarea
                 value={html}
                 onChange={(e) => setHtml(e.target.value)}
-                placeholder={t("newCampaign.htmlBodyPlaceholder")}
+                placeholder={tw("htmlBodyPlaceholder")}
                 className="min-h-[220px] font-mono text-xs"
+                required
               />
+              <span className="text-[12px] text-muted-foreground">{tw("htmlBodyHelp")}</span>
             </label>
 
-            <div className="rounded-lg border border-border p-4">
-              <div className="mb-2 text-sm font-medium">Preview</div>
-              <div className="text-xs text-muted-foreground">Subject: {subject || "—"}</div>
-              <div className="mb-3 text-xs text-muted-foreground">Preview text: {previewText || "—"}</div>
-              <div
-                className="prose max-w-none text-sm"
-                dangerouslySetInnerHTML={{ __html: html || "<p>Preview will appear here.</p>" }}
-              />
+            <div className="rounded-xl border border-border/70 bg-card p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-[13px] font-semibold tracking-tight text-foreground">
+                  {tw("preview.title")}
+                </h3>
+              </div>
+              <dl className="space-y-1.5 text-[12.5px]">
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0 text-muted-foreground">{tw("preview.subject")}</dt>
+                  <dd className="text-foreground">{subject || "—"}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0 text-muted-foreground">{tw("preview.previewText")}</dt>
+                  <dd className="text-foreground">{previewText || "—"}</dd>
+                </div>
+              </dl>
+              <div className="mt-4 rounded-lg border border-border/60 bg-background p-4">
+                {html.trim() ? (
+                  <div
+                    className="prose max-w-none text-sm"
+                    dangerouslySetInnerHTML={{ __html: html }}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">{tw("preview.empty")}</p>
+                )}
+              </div>
             </div>
           </div>
         )}
 
+        {/* Step 4 — Review & Send */}
         {step === 4 && (
-          <div className="grid gap-5">
-            <h2 className="text-lg font-semibold">Step 4: Preflight</h2>
-            <p className="text-sm text-muted-foreground">
-              Preflight runs automatically and shows simplified guidance.
-            </p>
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
+                {tw("review.title")}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">{tw("review.description")}</p>
+            </div>
 
-            {preflightLoading ? (
-              <div className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground">
-                Running checks...
+            {/* Summary */}
+            <section className="rounded-xl border border-border/70 bg-card p-4">
+              <h3 className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {tw("review.summarySection")}
+              </h3>
+              <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <dt className="text-[12px] text-muted-foreground">{tw("review.summaryName")}</dt>
+                  <dd className="mt-0.5 truncate text-[14px] font-medium text-foreground">
+                    {name || "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] text-muted-foreground">{tw("review.summarySender")}</dt>
+                  <dd className="mt-0.5 truncate text-[14px] font-medium text-foreground">
+                    {senderEmail || "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] text-muted-foreground">{tw("review.summaryRecipients")}</dt>
+                  <dd className="mt-0.5 text-[14px] font-medium tabular-nums text-foreground">
+                    {recipientsCount}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] text-muted-foreground">{tw("review.summarySubject")}</dt>
+                  <dd className="mt-0.5 truncate text-[14px] font-medium text-foreground">
+                    {subject || "—"}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+
+            {/* Pre-send checks (formerly preflight) */}
+            <section className="rounded-xl border border-border/70 bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  {tw("review.checksSection")}
+                </h3>
+                {preflightLoading ? (
+                  <span className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    {tw("review.checksRunning")}
+                  </span>
+                ) : preflight ? (
+                  <CheckStatusBadge status={preflight.status} t={tw} />
+                ) : null}
               </div>
-            ) : preflight ? (
-              <div className="rounded-lg border border-border p-4">
-                <div className="mb-3">{statusBadge(preflight.status)}</div>
-                <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              {preflight && preflight.recommendations.length > 0 ? (
+                <ul className="mt-3 space-y-1.5 pl-5 text-[13px] text-muted-foreground" style={{ listStyleType: "disc" }}>
                   {preflight.recommendations.map((item, idx) => (
                     <li key={`${item}-${idx}`}>{item}</li>
                   ))}
                 </ul>
+              ) : preflight ? (
+                <p className="mt-3 text-[13px] text-muted-foreground">
+                  {preflight.status === "good"
+                    ? tw("review.checksOkDescription")
+                    : tw("review.noRecommendations")}
+                </p>
+              ) : null}
+            </section>
+
+            {/* Delivery */}
+            <section className="space-y-3">
+              <div>
+                <h3 className="text-[15px] font-semibold tracking-tight text-foreground">
+                  {tw("send.title")}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">{tw("send.description")}</p>
               </div>
-            ) : (
-              <div className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground">
-                No preflight result yet.
+              <div className="grid gap-3 sm:grid-cols-2">
+                <DeliveryOption
+                  selected={sendMode === "now"}
+                  onSelect={() => setSendMode("now")}
+                  icon={<Send className="h-4 w-4" strokeWidth={2.2} />}
+                  label={tw("send.modeNow")}
+                />
+                <DeliveryOption
+                  selected={sendMode === "schedule"}
+                  onSelect={() => setSendMode("schedule")}
+                  icon={<Clock className="h-4 w-4" strokeWidth={2.2} />}
+                  label={tw("send.modeSchedule")}
+                />
               </div>
-            )}
 
-            <div>
-              <Button
-                variant="outline"
-                onClick={() => void runPreflight(true)}
-                loading={preflightLoading}
-              >
-                Re-run preflight
-              </Button>
-            </div>
-          </div>
-        )}
+              {sendMode === "schedule" && (
+                <div className="grid gap-4 rounded-xl border border-border/70 bg-card p-4 sm:grid-cols-2">
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-medium text-foreground">
+                      {tw("scheduleDateLabel")}
+                    </span>
+                    <Input
+                      type="date"
+                      lang="ka-GE"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-medium text-foreground">
+                      {tw("scheduleTimeLabel")}
+                    </span>
+                    <TimeSelect24 value={scheduledTime} onChange={setScheduledTime} />
+                  </label>
+                </div>
+              )}
+            </section>
 
-        {step === 5 && (
-          <div className="grid gap-5">
-            <h2 className="text-lg font-semibold">Step 5: Send</h2>
-
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">Delivery</span>
-              <select
-                value={sendMode}
-                onChange={(e) => setSendMode(e.target.value as "now" | "schedule")}
-                className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
-              >
-                <option value="now">Send now</option>
-                <option value="schedule">Schedule</option>
-              </select>
-            </label>
-
-            {sendMode === "schedule" && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium">{t("newCampaign.scheduleDateLabel")}</span>
-                  <Input
-                    type="date"
-                    lang="ka-GE"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium">{t("newCampaign.scheduleTimeLabel")}</span>
-                  <TimeSelect24
-                    value={scheduledTime}
-                    onChange={setScheduledTime}
-                  />
-                </label>
-              </div>
-            )}
-
-            <div className="rounded-lg border border-border p-4 text-sm">
-              <div className="mb-1 font-medium">Confirmation</div>
-              <div className="text-muted-foreground">Sender: {senderEmail || "—"}</div>
-              <div className="text-muted-foreground">Recipients: {recipientsCount}</div>
-              <div className="text-muted-foreground">Subject: {subject || "—"}</div>
-            </div>
-
-            <label className="flex items-center gap-2 text-sm">
+            {/* Confirm */}
+            <label className="flex items-start gap-3 rounded-xl border border-border/70 bg-[hsl(var(--muted)/0.4)] p-4 text-[13.5px]">
               <input
                 type="checkbox"
                 checked={confirmReady}
                 onChange={(e) => setConfirmReady(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-primary"
               />
-              I confirm this campaign is ready to send
+              <span className="text-foreground">{tw("review.confirmLabel")}</span>
             </label>
           </div>
         )}
 
-        <div className="mt-8 flex items-center justify-between">
+        {/* Footer actions */}
+        <div className="mt-8 flex flex-col-reverse items-stretch gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <Button
             type="button"
             variant="ghost"
+            size="md"
             onClick={() => {
               if (step === 1) {
                 router.push("/campaigns");
@@ -782,30 +944,107 @@ export default function NewCampaignPage() {
               }
               setStep((prev) => Math.max(1, prev - 1));
             }}
+            leftIcon={<ArrowLeft className="h-4 w-4" />}
           >
-            Back
+            {step === 1 ? tw("actions.cancel") : tw("actions.back")}
           </Button>
 
-          {step < 5 ? (
-            <Button
-              type="button"
-              onClick={() => setStep((prev) => Math.min(5, prev + 1))}
-              disabled={!canGoNext(step)}
-            >
-              Next
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              onClick={() => void handleFinish()}
-              loading={saving}
-              disabled={!confirmReady || !preflight || preflightLoading || preflightKey !== preflightFingerprint}
-            >
-              {saving ? "Finalizing..." : sendMode === "now" ? "Send campaign" : "Schedule campaign"}
-            </Button>
-          )}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+            {step === 4 && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => void handleSaveDraft()}
+                loading={savingDraft}
+                disabled={savingDraft || saving}
+              >
+                {savingDraft ? tw("actions.savingDraft") : tw("actions.saveDraft")}
+              </Button>
+            )}
+
+            {step < 4 ? (
+              <Button
+                type="button"
+                onClick={() => setStep((prev) => Math.min(4, prev + 1))}
+                disabled={!canGoNext(step)}
+                rightIcon={<ArrowRight className="h-4 w-4" />}
+              >
+                {tw("actions.next")}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => void handleFinish()}
+                loading={saving}
+                disabled={
+                  saving ||
+                  savingDraft ||
+                  !confirmReady ||
+                  !preflight ||
+                  preflightLoading ||
+                  preflightKey !== preflightFingerprint
+                }
+                rightIcon={<Send className="h-4 w-4" />}
+              >
+                {saving
+                  ? tw("actions.working")
+                  : sendMode === "now"
+                    ? tw("actions.sendNow")
+                    : tw("actions.schedule")}
+              </Button>
+            )}
+          </div>
         </div>
-      </Card>
+      </SectionCard>
     </div>
+  );
+}
+
+function DeliveryOption({
+  selected,
+  onSelect,
+  icon,
+  label,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={cn(
+        "group flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors",
+        selected
+          ? "border-primary/40 bg-primary/5 shadow-[0_1px_2px_hsl(var(--foreground)/0.04)]"
+          : "border-border/70 bg-card hover:border-border",
+      )}
+    >
+      <span
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-lg ring-1 transition-colors",
+          selected
+            ? "bg-primary text-primary-foreground ring-primary/30"
+            : "bg-muted text-foreground/80 ring-border",
+        )}
+        aria-hidden
+      >
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1 text-[14px] font-medium tracking-tight text-foreground">
+        {label}
+      </span>
+      <span
+        className={cn(
+          "h-4 w-4 shrink-0 rounded-full border transition-colors",
+          selected ? "border-primary bg-primary" : "border-border bg-card",
+        )}
+        aria-hidden
+      />
+    </button>
   );
 }

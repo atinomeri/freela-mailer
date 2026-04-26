@@ -8,6 +8,8 @@ import { useMailerAuth } from "@/lib/mailer-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
+import { useTranslations } from "next-intl";
 
 type GrapesEditor = {
   destroy: () => void;
@@ -293,6 +295,7 @@ async function fetchEditorAssets(
 
 export default function MailerTemplateEditorPage() {
   const { user, apiFetch } = useMailerAuth();
+  const t = useTranslations("mailer.templatesEditor");
   const mountRef = useRef<HTMLDivElement | null>(null);
   const blocksRef = useRef<HTMLDivElement | null>(null);
   const traitsRef = useRef<HTMLDivElement | null>(null);
@@ -641,127 +644,141 @@ export default function MailerTemplateEditorPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Template Editor (MJML)</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Phase 2 basics: edit with starter MJML blocks and save project JSON, MJML source, and rendered HTML.
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link href="/templates">
-            <ArrowLeft className="h-4 w-4" />
-            Back to templates
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      {/* Top bar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            href="/templates"
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            {t("back")}
           </Link>
-        </Button>
-      </div>
-
-      <Card className="p-4">
-        <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Template name</span>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="My MJML template" />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Subject (optional)</span>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject line" />
-          </label>
-          <Button onClick={() => void handleSave()} loading={saving} disabled={initializing || !name.trim()}>
-            <Save className="h-4 w-4" />
-            Save
+          <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
+          <h1 className="truncate text-[18px] font-semibold tracking-tight text-foreground">
+            {name.trim() || t("title")}
+          </h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => runEditorCommand("core:undo")}
+            disabled={initializing}
+            leftIcon={<Undo2 className="h-3.5 w-3.5" />}
+          >
+            {t("undo")}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => runEditorCommand("core:redo")}
+            disabled={initializing}
+            leftIcon={<Redo2 className="h-3.5 w-3.5" />}
+          >
+            {t("redo")}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void handlePreview()}
+            disabled={initializing}
+            leftIcon={<ExternalLink className="h-3.5 w-3.5" />}
+          >
+            {t("preview")}
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => void handleSave()}
+            loading={saving}
+            disabled={initializing || !name.trim()}
+            leftIcon={<Save className="h-3.5 w-3.5" />}
+          >
+            {t("save")}
           </Button>
         </div>
+      </div>
 
-        {error ? (
-          <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {error}
-          </p>
-        ) : null}
-
-        {success ? (
-          <p className="mt-3 rounded-md border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
-            {success}
-          </p>
-        ) : null}
+      {/* Name + subject */}
+      <Card className="p-4 sm:p-5" hover={false}>
+        <div className="grid gap-3 md:grid-cols-2 md:items-end">
+          <label className="grid gap-1.5 text-sm">
+            <span className="font-medium text-foreground">{t("templateNameLabel")}</span>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("templateNamePlaceholder")}
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm">
+            <span className="font-medium text-foreground">{t("subjectLabel")}</span>
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder={t("subjectPlaceholder")}
+            />
+          </label>
+        </div>
+        {error ? <Alert variant="destructive" className="mt-3">{error}</Alert> : null}
+        {success ? <Alert variant="success" className="mt-3">{success}</Alert> : null}
       </Card>
 
-      <Card className="relative overflow-hidden p-0">
-        <div className="grid border-b border-border bg-muted/20 px-3 py-2 md:grid-cols-[240px_minmax(0,1fr)_300px] md:items-center md:gap-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Starter blocks</p>
-          <div className="flex flex-wrap items-center justify-start gap-2 py-2 md:justify-center md:py-0">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8"
-              onClick={() => runEditorCommand("core:undo")}
-              disabled={initializing}
-            >
-              <Undo2 className="h-3.5 w-3.5" />
-              Undo
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8"
-              onClick={() => runEditorCommand("core:redo")}
-              disabled={initializing}
-            >
-              <Redo2 className="h-3.5 w-3.5" />
-              Redo
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8"
-              onClick={() => void handlePreview()}
-              disabled={initializing}
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Preview
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground md:text-right">
-            Selected: <span className="font-medium text-foreground">{selectedBlockLabel}</span>
-          </p>
-        </div>
+      {/* Workspace */}
+      <Card className="relative overflow-hidden p-0" hover={false}>
         <div className="mjml-editor-shell grid h-[72vh] grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)_300px]">
-          <aside className="border-b border-border bg-muted/20 md:border-b-0 md:border-r">
-            <div className="border-b border-border px-3 py-2">
-              <p className="text-sm font-medium">Blocks</p>
-              <p className="text-xs text-muted-foreground">Drag and drop into the canvas.</p>
+          <aside className="border-b border-border/70 bg-[hsl(var(--muted)/0.4)] md:border-b-0 md:border-r">
+            <div className="border-b border-border/70 px-4 py-3">
+              <p className="text-[13px] font-semibold tracking-tight text-foreground">
+                {t("blocksTitle")}
+              </p>
+              <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                {t("blocksDescription")}
+              </p>
             </div>
-            <div ref={blocksRef} className="h-[220px] overflow-y-auto p-2 md:h-[calc(72vh-56px)]" />
+            <div ref={blocksRef} className="h-[220px] overflow-y-auto p-2 md:h-[calc(72vh-64px)]" />
           </aside>
           <div className="relative h-[72vh] min-w-0 bg-slate-100/70">
             <div ref={mountRef} className="h-[72vh] min-w-0" />
+            <div className="pointer-events-none absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/90 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-[0_1px_2px_hsl(var(--foreground)/0.04)] backdrop-blur">
+              <span className="text-muted-foreground">{t("selected")}:</span>
+              <span className="font-semibold text-foreground">
+                {selectedBlockLabel || t("selectedNone")}
+              </span>
+            </div>
           </div>
-          <aside className="border-t border-border bg-muted/20 md:border-l md:border-t-0">
-            <div className="border-b border-border px-3 py-2">
-              <p className="text-sm font-medium">Block settings</p>
-              <p className="text-xs text-muted-foreground">Edit selected block content and style.</p>
+          <aside className="border-t border-border/70 bg-[hsl(var(--muted)/0.4)] md:border-l md:border-t-0">
+            <div className="border-b border-border/70 px-4 py-3">
+              <p className="text-[13px] font-semibold tracking-tight text-foreground">
+                {t("blockSettingsTitle")}
+              </p>
+              <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                {t("blockSettingsDescription")}
+              </p>
             </div>
             {isImageSelected ? (
-              <div className="space-y-2 border-b border-border p-2">
+              <div className="space-y-2 border-b border-border/70 p-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Image</p>
+                  <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    {t("imageSection")}
+                  </p>
                   <Button
                     type="button"
                     size="sm"
-                    variant="outline"
-                    className="h-7"
+                    variant="secondary"
+                    className="h-7 px-2 text-[11.5px]"
                     loading={imageUploading}
                     onClick={() => imageInputRef.current?.click()}
+                    leftIcon={<ImageUp className="h-3 w-3" />}
                   >
-                    <ImageUp className="h-3.5 w-3.5" />
-                    Upload
+                    {t("imageUpload")}
                   </Button>
                 </div>
                 <label className="grid gap-1 text-xs text-muted-foreground">
-                  <span>Image URL</span>
+                  <span>{t("imageUrlLabel")}</span>
                   <Input
                     value={imageUrl}
                     onChange={(e) => {
@@ -774,7 +791,7 @@ export default function MailerTemplateEditorPage() {
                   />
                 </label>
                 <label className="grid gap-1 text-xs text-muted-foreground">
-                  <span>Alt text</span>
+                  <span>{t("imageAltLabel")}</span>
                   <Input
                     value={imageAlt}
                     onChange={(e) => {
@@ -782,12 +799,12 @@ export default function MailerTemplateEditorPage() {
                       setImageAlt(value);
                       updateSelectedImageAttributes({ alt: value });
                     }}
-                    placeholder="Describe image"
+                    placeholder={t("imageAltPlaceholder")}
                     className="h-8 text-xs"
                   />
                 </label>
                 <label className="grid gap-1 text-xs text-muted-foreground">
-                  <span>Link URL</span>
+                  <span>{t("imageLinkLabel")}</span>
                   <Input
                     value={imageLink}
                     onChange={(e) => {
@@ -808,19 +825,23 @@ export default function MailerTemplateEditorPage() {
                 />
               </div>
             ) : null}
-            <div className="h-[240px] overflow-y-auto border-b border-border p-2 md:h-[calc((72vh-56px)/2)]">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Content</p>
+            <div className="h-[240px] overflow-y-auto border-b border-border/70 p-3 md:h-[calc((72vh-64px)/2)]">
+              <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {t("contentSection")}
+              </p>
               <div ref={traitsRef} />
             </div>
-            <div className="h-[240px] overflow-y-auto p-2 md:h-[calc((72vh-56px)/2)]">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Style</p>
+            <div className="h-[240px] overflow-y-auto p-3 md:h-[calc((72vh-64px)/2)]">
+              <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {t("styleSection")}
+              </p>
               <div ref={stylesRef} />
             </div>
           </aside>
         </div>
         {initializing ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 text-sm text-muted-foreground">
-            Loading editor...
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 text-sm text-muted-foreground backdrop-blur-sm">
+            {t("loadingEditor")}
           </div>
         ) : null}
       </Card>

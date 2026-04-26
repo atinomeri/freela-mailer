@@ -2,11 +2,14 @@
 
 import { useMailerAuth } from "@/lib/mailer-auth";
 import { useEffect, useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionCard } from "@/components/ui/section-card";
+import { Alert } from "@/components/ui/alert";
 import { MailerLoginPage } from "../login-page";
-import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
+import { ArrowRight } from "lucide-react";
 
 interface SmtpConfig {
   host: string;
@@ -47,6 +50,8 @@ function parseFromAddress(raw: string | null | undefined): {
 
 export default function MailerSettingsPage() {
   const { user, apiFetch } = useMailerAuth();
+  const t = useTranslations("mailer.settingsPage");
+  const tA = useTranslations("mailer.actions");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -60,7 +65,6 @@ export default function MailerSettingsPage() {
   const [fromName, setFromName] = useState("");
   const [trackOpens, setTrackOpens] = useState(true);
   const [trackClicks, setTrackClicks] = useState(true);
-  const [source, setSource] = useState<"env" | "user">("user");
 
   useEffect(() => {
     if (!user) return;
@@ -69,7 +73,7 @@ export default function MailerSettingsPage() {
       setError("");
       try {
         const res = await apiFetch("/api/desktop/smtp-config");
-        if (!res.ok) throw new Error("Failed to load SMTP config");
+        if (!res.ok) throw new Error(t("loadFailed"));
         const body = (await res.json()) as { data: SmtpConfig };
         const data = body.data;
         setHost(data.host || "");
@@ -81,15 +85,14 @@ export default function MailerSettingsPage() {
         setFromName(data.fromName || parsedFrom.name || "");
         setTrackOpens(data.trackOpens ?? true);
         setTrackClicks(data.trackClicks ?? true);
-        setSource(data.source);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load settings");
+        setError(err instanceof Error ? err.message : t("loadFailed"));
       } finally {
         setLoading(false);
       }
     }
     void load();
-  }, [user, apiFetch]);
+  }, [user, apiFetch, t]);
 
   if (!user) return <MailerLoginPage />;
 
@@ -123,7 +126,6 @@ export default function MailerSettingsPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // Keep SMTP transport fields unchanged in backend config while this page edits only general defaults.
           host,
           port,
           secure,
@@ -137,120 +139,116 @@ export default function MailerSettingsPage() {
 
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
-        throw new Error(parseError(body, "Failed to save settings"));
+        throw new Error(parseError(body, t("saveFailed")));
       }
 
-      setSource("user");
-      setSuccess("General settings saved");
+      setSuccess(t("saveSuccess"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save settings");
+      setError(err instanceof Error ? err.message : t("saveFailed"));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">General Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Configure default sender details and campaign tracking behavior.
-        </p>
-      </div>
-
-      <div className="mb-4 rounded-lg border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
-        Email accounts are managed in{" "}
-        <Link href="/smtp-pool" className="font-medium text-foreground underline-offset-4 hover:underline">
-          Sending Accounts
-        </Link>
-        .
-      </div>
+    <div className="mx-auto max-w-3xl space-y-6 lg:space-y-8">
+      <PageHeader title={t("title")} description={t("description")} />
 
       {error && (
-        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+        <Alert variant="destructive" onDismiss={() => setError("")}>
           {error}
-        </div>
+        </Alert>
       )}
       {success && (
-        <div className="mb-4 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
+        <Alert variant="success" onDismiss={() => setSuccess("")}>
           {success}
-        </div>
+        </Alert>
       )}
 
-      <Card className="p-6" hover={false}>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        ) : (
-          <form className="grid gap-8" onSubmit={handleSave}>
-            <section className="space-y-4">
-              <div>
-                <h2 className="text-base font-semibold">Sender Defaults</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Used when a sending account does not define its own sender details.
-                </p>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium">Default From Email</span>
-                  <Input
-                    value={fromEmail}
-                    onChange={(e) => setFromEmail(e.target.value)}
-                    placeholder="sender@company.com"
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium">Default From Name</span>
-                  <Input
-                    value={fromName}
-                    onChange={(e) => setFromName(e.target.value)}
-                    placeholder="Your team or brand name"
-                  />
-                </label>
-              </div>
-            </section>
-
-            <section className="space-y-4 border-t border-border/70 pt-6">
-              <div>
-                <h2 className="text-base font-semibold">Tracking Settings</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Controls tracking behavior for all campaigns.
-                </p>
-              </div>
-
-              <div className="grid gap-2 text-sm">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={trackOpens}
-                    onChange={(e) => setTrackOpens(e.target.checked)}
-                  />
-                  Enable open tracking
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={trackClicks}
-                    onChange={(e) => setTrackClicks(e.target.checked)}
-                  />
-                  Enable click tracking
-                </label>
-              </div>
-            </section>
-
-            <div className="border-t border-border/70 pt-4 text-xs text-muted-foreground">
-              Settings source:{" "}
-              <span className="font-medium">{source === "user" ? "User config" : "Environment defaults"}</span>
+      {loading ? (
+        <SectionCard padded>
+          <p className="text-sm text-muted-foreground">{t("loading")}</p>
+        </SectionCard>
+      ) : (
+        <form onSubmit={handleSave} className="space-y-6">
+          {/* Sender defaults */}
+          <SectionCard
+            title={t("groups.senderDefaults.title")}
+            description={t("groups.senderDefaults.description")}
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="grid gap-1.5 text-sm">
+                <span className="font-medium text-foreground">
+                  {t("groups.senderDefaults.fromEmailLabel")}
+                </span>
+                <Input
+                  value={fromEmail}
+                  onChange={(e) => setFromEmail(e.target.value)}
+                  placeholder={t("groups.senderDefaults.fromEmailPlaceholder")}
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm">
+                <span className="font-medium text-foreground">
+                  {t("groups.senderDefaults.fromNameLabel")}
+                </span>
+                <Input
+                  value={fromName}
+                  onChange={(e) => setFromName(e.target.value)}
+                  placeholder={t("groups.senderDefaults.fromNamePlaceholder")}
+                />
+              </label>
             </div>
+          </SectionCard>
 
-            <div className="flex justify-end">
-              <Button type="submit" loading={saving}>
-                Save settings
-              </Button>
+          {/* Sending accounts (link out) */}
+          <SectionCard
+            title={t("groups.sendingAccounts.title")}
+            description={t("groups.sendingAccounts.description")}
+          >
+            <ButtonLink
+              href="/smtp-pool"
+              variant="secondary"
+              size="md"
+              rightIcon={<ArrowRight className="h-4 w-4" />}
+            >
+              {t("groups.sendingAccounts.manageAction")}
+            </ButtonLink>
+          </SectionCard>
+
+          {/* Tracking */}
+          <SectionCard
+            title={t("groups.tracking.title")}
+            description={t("groups.tracking.description")}
+          >
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 rounded-xl border border-border/70 bg-card p-4 text-[13.5px] transition-colors hover:border-border">
+                <input
+                  type="checkbox"
+                  checked={trackOpens}
+                  onChange={(e) => setTrackOpens(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-primary"
+                />
+                <span className="text-foreground">{t("groups.tracking.openLabel")}</span>
+              </label>
+              <label className="flex items-start gap-3 rounded-xl border border-border/70 bg-card p-4 text-[13.5px] transition-colors hover:border-border">
+                <input
+                  type="checkbox"
+                  checked={trackClicks}
+                  onChange={(e) => setTrackClicks(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-primary"
+                />
+                <span className="text-foreground">{t("groups.tracking.clickLabel")}</span>
+              </label>
             </div>
-          </form>
-        )}
-      </Card>
+          </SectionCard>
+
+          <div className="flex justify-end">
+            <Button type="submit" loading={saving}>
+              {saving ? tA("creating") : t("saveAction")}
+            </Button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
