@@ -451,7 +451,7 @@ export const saveMailerEditorTemplateSchema = z.object({
   name: z.string().min(1, "Template name is required").max(200),
   subject: z.string().max(998).nullable().optional(),
   editorProjectJson: z.unknown(),
-  mjmlSource: z.string().min(1, "MJML source is required"),
+  mjmlSource: z.string().nullable().optional(),
   htmlOutput: z.string().min(1, "Rendered HTML is required"),
 });
 

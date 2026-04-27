@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireDesktopAuth } from "@/lib/desktop-auth";
 import { saveMailerEditorTemplateSchema } from "@/lib/validation";
@@ -67,8 +68,8 @@ export async function POST(req: Request) {
           data: {
             name: payload.name,
             subject: payload.subject ?? null,
-            editorProjectJson: payload.editorProjectJson,
-            mjmlSource: payload.mjmlSource,
+            editorProjectJson: payload.editorProjectJson as Prisma.InputJsonValue,
+            mjmlSource: payload.mjmlSource ?? "",
             htmlOutput: payload.htmlOutput,
           },
           select: {
@@ -91,10 +92,10 @@ export async function POST(req: Request) {
               id: payload.id,
               desktopUserId: auth.user.id,
               name: payload.name,
-              category: "mjml-editor",
+              category: "unlayer-editor",
               subject: payload.subject?.trim() || payload.name,
               html: payload.htmlOutput,
-              description: "Created in MJML editor",
+              description: "Created in Unlayer editor",
             },
           });
         } else if (existingCampaignTemplate.desktopUserId === auth.user.id) {
@@ -102,7 +103,7 @@ export async function POST(req: Request) {
             where: { id: payload.id },
             data: {
               name: payload.name,
-              category: "mjml-editor",
+              category: "unlayer-editor",
               subject: payload.subject?.trim() || payload.name,
               html: payload.htmlOutput,
             },
@@ -121,8 +122,8 @@ export async function POST(req: Request) {
           desktopUserId: auth.user.id,
           name: payload.name,
           subject: payload.subject ?? null,
-          editorProjectJson: payload.editorProjectJson,
-          mjmlSource: payload.mjmlSource,
+          editorProjectJson: payload.editorProjectJson as Prisma.InputJsonValue,
+          mjmlSource: payload.mjmlSource ?? "",
           htmlOutput: payload.htmlOutput,
         },
         select: {
@@ -140,15 +141,15 @@ export async function POST(req: Request) {
           id: editorTemplate.id,
           desktopUserId: auth.user.id,
           name: payload.name,
-          category: "mjml-editor",
+          category: "unlayer-editor",
           subject: payload.subject?.trim() || payload.name,
           html: payload.htmlOutput,
-          description: "Created in MJML editor",
+          description: "Created in Unlayer editor",
         },
         update: {
           desktopUserId: auth.user.id,
           name: payload.name,
-          category: "mjml-editor",
+          category: "unlayer-editor",
           subject: payload.subject?.trim() || payload.name,
           html: payload.htmlOutput,
         },

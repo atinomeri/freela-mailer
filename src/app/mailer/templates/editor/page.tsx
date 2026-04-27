@@ -1,945 +1,184 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ExternalLink, ImageUp, Redo2, Save, Undo2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowRight, Check, Code2, LayoutTemplate, Type } from "lucide-react";
 import { MailerLoginPage } from "../../login-page";
 import { useMailerAuth } from "@/lib/mailer-auth";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Alert } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
-type GrapesEditor = {
-  destroy: () => void;
-  getProjectData: () => unknown;
-  getHtml: () => string;
-  runCommand: (name: string, options?: unknown) => unknown;
-  on: (event: string, callback: (component?: unknown) => void) => void;
-  off: (event: string, callback: (component?: unknown) => void) => void;
-  getSelected: () => { getName?: () => string; get?: (key: string) => unknown } | null;
-  AssetManager: {
-    add: (asset: { src: string; type?: string; name?: string }) => void;
-    getAll: () => Array<{ get: (key: string) => unknown }>;
-  };
-  DomComponents: {
-    getType: (name: string) => {
-      model?: {
-        prototype?: {
-          defaults?: {
-            traits?: unknown[];
-          };
-        };
-      };
-    } | undefined;
-    addType: (
-      name: string,
-      definition: {
-        model: {
-          extend: unknown;
-          defaults: {
-            traits: unknown[];
-          };
-        };
-      },
-    ) => void;
-  };
-  BlockManager: {
-    add: (
-      id: string,
-      options: {
-        label: string;
-        category: string;
-        content: string;
-      },
-    ) => void;
-    getAll: () => { reset: () => void };
-    getCategories: () => {
-      each: (callback: (category: { set: (key: string, value: boolean) => void }) => void) => void;
-    };
-  };
-};
+type EditorMode = "drag" | "rich" | "code";
 
-type SelectedComponent = {
-  getName?: () => string;
-  get?: (key: string) => unknown;
-  getAttributes?: () => Record<string, string>;
-  addAttributes?: (attrs: Record<string, string>) => void;
-};
-
-interface EditorExportPayload {
-  mjml?: string;
-  html?: string;
-}
-
-interface UploadedAsset {
-  url: string;
-  name: string;
-  size?: number;
-  type?: string;
-}
-
-const DEFAULT_MJML_TEMPLATE = `<mjml>
-  <mj-body background-color="#f4f4f5">
-    <mj-section background-color="#ffffff" padding="24px 20px">
-      <mj-column>
-        <mj-text font-size="24px" font-family="Arial, sans-serif" color="#111827">
-          New email template
-        </mj-text>
-        <mj-text font-size="15px" font-family="Arial, sans-serif" color="#4b5563">
-          Start editing this blank MJML template.
-        </mj-text>
-      </mj-column>
-    </mj-section>
-  </mj-body>
-</mjml>`;
-
-const STARTER_BLOCKS: Array<{
-  id: string;
-  label: string;
-  category: string;
-  content: string;
-}> = [
-  {
-    id: "starter-text",
-    label: "Text",
-    category: "Content",
-    content: `<mj-section padding="16px 20px">
-  <mj-column>
-    <mj-text font-size="16px" color="#111827" font-family="Arial, sans-serif">
-      Write your message here.
-    </mj-text>
-  </mj-column>
-</mj-section>`,
-  },
-  {
-    id: "starter-image",
-    label: "Image",
-    category: "Content",
-    content: `<mj-section padding="16px 20px">
-  <mj-column>
-    <mj-image src="https://via.placeholder.com/600x240?text=Your+Image" alt="Image" />
-  </mj-column>
-</mj-section>`,
-  },
-  {
-    id: "starter-button",
-    label: "Button",
-    category: "Content",
-    content: `<mj-section padding="16px 20px">
-  <mj-column>
-    <mj-button background-color="#2563eb" color="#ffffff" border-radius="8px" font-size="15px">
-      Call to action
-    </mj-button>
-  </mj-column>
-</mj-section>`,
-  },
-  {
-    id: "starter-divider",
-    label: "Divider",
-    category: "Content",
-    content: `<mj-section padding="8px 20px">
-  <mj-column>
-    <mj-divider border-color="#e5e7eb" border-width="1px" />
-  </mj-column>
-</mj-section>`,
-  },
-  {
-    id: "starter-spacer",
-    label: "Spacer",
-    category: "Content",
-    content: `<mj-section padding="0 20px">
-  <mj-column>
-    <mj-spacer height="24px" />
-  </mj-column>
-</mj-section>`,
-  },
-  {
-    id: "starter-columns-2",
-    label: "2 Columns",
-    category: "Layout",
-    content: `<mj-section padding="16px 20px">
-  <mj-column width="50%">
-    <mj-text font-size="15px" color="#111827">Column 1</mj-text>
-  </mj-column>
-  <mj-column width="50%">
-    <mj-text font-size="15px" color="#111827">Column 2</mj-text>
-  </mj-column>
-</mj-section>`,
-  },
-  {
-    id: "starter-columns-3",
-    label: "3 Columns",
-    category: "Layout",
-    content: `<mj-section padding="16px 20px">
-  <mj-column width="33.33%">
-    <mj-text font-size="14px" color="#111827">Column 1</mj-text>
-  </mj-column>
-  <mj-column width="33.33%">
-    <mj-text font-size="14px" color="#111827">Column 2</mj-text>
-  </mj-column>
-  <mj-column width="33.33%">
-    <mj-text font-size="14px" color="#111827">Column 3</mj-text>
-  </mj-column>
-</mj-section>`,
-  },
-  {
-    id: "starter-header",
-    label: "Header",
-    category: "Sections",
-    content: `<mj-section background-color="#111827" padding="20px">
-  <mj-column>
-    <mj-text align="center" font-size="20px" font-weight="700" color="#ffffff">
-      Your brand name
-    </mj-text>
-  </mj-column>
-</mj-section>`,
-  },
-  {
-    id: "starter-footer",
-    label: "Footer",
-    category: "Sections",
-    content: `<mj-section background-color="#f9fafb" padding="20px">
-  <mj-column>
-    <mj-text align="center" font-size="12px" color="#6b7280">
-      You are receiving this email because you subscribed.
-    </mj-text>
-    <mj-text align="center" font-size="12px" color="#6b7280">
-      Unsubscribe | Update preferences
-    </mj-text>
-  </mj-column>
-</mj-section>`,
-  },
-];
-
-function parseEditorExport(value: unknown): EditorExportPayload {
-  if (!value || typeof value !== "object") return {};
-  const source = value as Record<string, unknown>;
-  return {
-    mjml: typeof source.mjml === "string" ? source.mjml : undefined,
-    html: typeof source.html === "string" ? source.html : undefined,
-  };
-}
-
-function parseCommandString(value: unknown): string | undefined {
-  if (typeof value === "string") return value;
-  if (!value || typeof value !== "object") return undefined;
-
-  const source = value as Record<string, unknown>;
-  const candidates = ["mjml", "html", "code", "result"];
-  for (const key of candidates) {
-    const val = source[key];
-    if (typeof val === "string") return val;
-  }
-  return undefined;
-}
-
-function buildExportFromCommands(editor: GrapesEditor): EditorExportPayload {
-  const mjmlCommand = parseCommandString(editor.runCommand("mjml-code"));
-  const mjmlSource = mjmlCommand?.trim() || parseEditorExport(editor.runCommand("mjml-export")).mjml || editor.getHtml();
-
-  const htmlCommand = parseCommandString(editor.runCommand("mjml-code-to-html", { mjml: mjmlSource }));
-  const htmlFromExport = parseEditorExport(editor.runCommand("mjml-export")).html;
-  const htmlOutput = htmlCommand?.trim() || htmlFromExport?.trim();
-
-  return {
-    mjml: mjmlSource,
-    html: htmlOutput,
-  };
-}
-
-function registerStarterBlocks(editor: GrapesEditor) {
-  const blockManager = editor.BlockManager;
-  blockManager.getAll().reset();
-
-  for (const block of STARTER_BLOCKS) {
-    blockManager.add(block.id, {
-      label: block.label,
-      category: block.category,
-      content: block.content,
-    });
-  }
-
-  blockManager.getCategories().each((category) => {
-    category.set("open", true);
-  });
-}
-
-function getSelectedComponentLabel(component: SelectedComponent | null): string {
-  if (!component) return "No block selected";
-  const explicitName = component.getName?.();
-  const fallbackType = component.get?.("type");
-  return explicitName || (typeof fallbackType === "string" ? fallbackType : "block");
-}
-
-function isImageComponent(component: SelectedComponent | null): boolean {
-  if (!component) return false;
-  const type = component.get?.("type");
-  const name = component.getName?.();
-  return (
-    (typeof type === "string" && type.toLowerCase().includes("image")) ||
-    (typeof name === "string" && name.toLowerCase().includes("image"))
-  );
-}
-
-async function fetchEditorAssets(
-  apiFetch: ReturnType<typeof useMailerAuth>["apiFetch"],
-): Promise<UploadedAsset[]> {
-  const res = await apiFetch("/api/desktop/editor-assets?limit=100");
-  if (!res.ok) return [];
-  const body = await res.json().catch(() => null) as { ok?: boolean; data?: UploadedAsset[] } | null;
-  if (!body?.ok || !Array.isArray(body.data)) return [];
-  return body.data.filter((item) => typeof item.url === "string");
-}
-
-export default function MailerTemplateEditorPage() {
-  const { user, apiFetch } = useMailerAuth();
+export default function MailerTemplateChooserPage() {
+  const { user } = useMailerAuth();
+  const router = useRouter();
   const t = useTranslations("mailer.templatesEditor");
-  const mountRef = useRef<HTMLDivElement | null>(null);
-  const blocksRef = useRef<HTMLDivElement | null>(null);
-  const traitsRef = useRef<HTMLDivElement | null>(null);
-  const stylesRef = useRef<HTMLDivElement | null>(null);
-  const imageInputRef = useRef<HTMLInputElement | null>(null);
-  const editorRef = useRef<GrapesEditor | null>(null);
-  const selectedRef = useRef<SelectedComponent | null>(null);
-
-  const [initializing, setInitializing] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [imageUploading, setImageUploading] = useState(false);
-  const [imageUrl, setImageUrl] = useState("");
-  const [imageAlt, setImageAlt] = useState("");
-  const [imageLink, setImageLink] = useState("");
-  const [isImageSelected, setIsImageSelected] = useState(false);
-  const [selectedBlockLabel, setSelectedBlockLabel] = useState("No block selected");
-  const [name, setName] = useState("Untitled MJML Template");
-  const [subject, setSubject] = useState("");
-  const [templateId, setTemplateId] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function initEditor() {
-      if (!user || !mountRef.current || !blocksRef.current || !traitsRef.current || !stylesRef.current) return;
-      setInitializing(true);
-
-      try {
-        const [{ default: grapesjs }, { default: grapesjsMjml }] = await Promise.all([
-          import("grapesjs"),
-          import("grapesjs-mjml"),
-        ]);
-
-        if (cancelled || !mountRef.current) return;
-        const existingAssets = await fetchEditorAssets(apiFetch);
-        if (cancelled || !mountRef.current) return;
-
-        const editor = grapesjs.init({
-          container: mountRef.current,
-          fromElement: false,
-          height: "100%",
-          storageManager: false,
-          panels: { defaults: [] },
-          blockManager: {
-            appendTo: blocksRef.current,
-          },
-          traitManager: {
-            appendTo: traitsRef.current,
-          },
-          styleManager: {
-            appendTo: stylesRef.current,
-            sectors: [
-              {
-                name: "Typography",
-                open: true,
-                buildProps: ["font-family", "font-size", "font-weight", "line-height", "text-align", "color"],
-              },
-              {
-                name: "Spacing",
-                open: true,
-                buildProps: ["padding", "margin"],
-              },
-              {
-                name: "Dimension",
-                open: false,
-                buildProps: ["width", "height"],
-              },
-              {
-                name: "Decorations",
-                open: false,
-                buildProps: ["background-color", "border", "border-radius"],
-              },
-            ],
-          },
-          plugins: [grapesjsMjml],
-          pluginsOpts: {
-            "grapesjs-mjml": {
-              useXmlParser: true,
-            },
-          },
-          assetManager: {
-            assets: existingAssets.map((item) => ({
-              src: item.url,
-              type: "image",
-              name: item.name,
-            })),
-            upload: false,
-            uploadName: "files",
-            autoAdd: false,
-            uploadFile: async (event: Event) => {
-              const drag = event as DragEvent;
-              const target = event.target as HTMLInputElement | null;
-              const list = drag.dataTransfer?.files ?? target?.files;
-              if (!list || list.length === 0) return;
-
-              const formData = new FormData();
-              for (const file of Array.from(list)) {
-                formData.append("files", file);
-              }
-
-              const res = await apiFetch("/api/desktop/editor-assets", {
-                method: "POST",
-                body: formData,
-              });
-              const body = await res.json().catch(() => null) as {
-                ok?: boolean;
-                data?: UploadedAsset[];
-                error?: { message?: string };
-              } | null;
-              if (!res.ok || !body?.ok || !Array.isArray(body.data)) {
-                throw new Error(body?.error?.message || "Image upload failed");
-              }
-
-              for (const asset of body.data) {
-                editor.AssetManager.add({
-                  src: asset.url,
-                  type: "image",
-                  name: asset.name,
-                });
-              }
-            },
-          },
-          components: DEFAULT_MJML_TEMPLATE,
-        }) as unknown as GrapesEditor;
-
-        const imageType = editor.DomComponents.getType("image");
-        const imageModel = imageType?.model;
-        if (imageModel) {
-          const baseTraits = Array.isArray(imageModel.prototype?.defaults?.traits)
-            ? imageModel.prototype?.defaults?.traits
-            : [];
-          editor.DomComponents.addType("image", {
-            model: {
-              extend: imageModel,
-              defaults: {
-                traits: [
-                  ...baseTraits,
-                  { type: "text", label: "Link URL", name: "href" },
-                ],
-              },
-            },
-          });
-        }
-
-        function syncSelectedComponent(component: SelectedComponent | null) {
-          selectedRef.current = component;
-          setSelectedBlockLabel(getSelectedComponentLabel(component));
-          const imageSelected = isImageComponent(component);
-          setIsImageSelected(imageSelected);
-
-          if (!imageSelected || !component) {
-            setImageUrl("");
-            setImageAlt("");
-            setImageLink("");
-            return;
-          }
-
-          const attrs = component.getAttributes?.() || {};
-          setImageUrl(attrs.src ?? "");
-          setImageAlt(attrs.alt ?? "");
-          setImageLink(attrs.href ?? "");
-        }
-
-        registerStarterBlocks(editor);
-        const onSelected = (component?: unknown) => {
-          const selected = (component as SelectedComponent | undefined) ?? (editor.getSelected() as SelectedComponent | null);
-          syncSelectedComponent(selected);
-        };
-        const onDeselected = () => syncSelectedComponent(null);
-
-        editor.on("component:selected", onSelected);
-        editor.on("component:update", onSelected);
-        editor.on("component:deselected", onDeselected);
-        editorRef.current = editor;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to initialize editor");
-      } finally {
-        if (!cancelled) setInitializing(false);
-      }
-    }
-
-    void initEditor();
-
-    return () => {
-      cancelled = true;
-      editorRef.current?.destroy();
-      editorRef.current = null;
-      selectedRef.current = null;
-    };
-  }, [apiFetch, user]);
 
   if (!user) return <MailerLoginPage />;
 
-  function runEditorCommand(name: string) {
-    if (!editorRef.current) return;
-    editorRef.current.runCommand(name);
-  }
-
-  function updateSelectedImageAttributes(next: Partial<Record<"src" | "alt" | "href", string>>) {
-    const selected = selectedRef.current;
-    if (!selected || !selected.addAttributes || !isImageComponent(selected)) return;
-    const attrs = selected.getAttributes?.() || {};
-    selected.addAttributes({ ...attrs, ...next });
-  }
-
-  async function uploadImages(files: FileList | File[]): Promise<UploadedAsset[]> {
-    const formData = new FormData();
-    for (const file of Array.from(files)) {
-      formData.append("files", file);
-    }
-
-    const res = await apiFetch("/api/desktop/editor-assets", {
-      method: "POST",
-      body: formData,
-    });
-
-    const body = await res.json().catch(() => null) as {
-      ok?: boolean;
-      data?: UploadedAsset[];
-      error?: { message?: string };
-    } | null;
-    if (!res.ok || !body?.ok || !Array.isArray(body.data)) {
-      throw new Error(body?.error?.message || "Image upload failed");
-    }
-    return body.data;
-  }
-
-  async function handleImageUploadFromInput(event: React.ChangeEvent<HTMLInputElement>) {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    setImageUploading(true);
-    setError("");
-
-    try {
-      const uploaded = await uploadImages(files);
-      const editor = editorRef.current;
-      if (!editor || uploaded.length === 0) return;
-
-      for (const asset of uploaded) {
-        editor.AssetManager.add({
-          src: asset.url,
-          type: "image",
-          name: asset.name,
-        });
-      }
-
-      const first = uploaded[0];
-      setImageUrl(first.url);
-      updateSelectedImageAttributes({ src: first.url });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Image upload failed");
-    } finally {
-      setImageUploading(false);
-      event.target.value = "";
-    }
-  }
-
-  async function handleSave() {
-    if (!editorRef.current) return;
-
-    setSaving(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const editor = editorRef.current;
-      const editorProjectJson = editor.getProjectData();
-      const exported = buildExportFromCommands(editor);
-      const mjmlSource = exported.mjml || editor.getHtml();
-      const htmlOutput = exported.html;
-      if (!htmlOutput?.trim()) {
-        throw new Error("Save failed: unable to generate HTML from MJML");
-      }
-
-      const res = await apiFetch("/api/desktop/editor-templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: templateId ?? undefined,
-          name,
-          subject: subject.trim() ? subject.trim() : null,
-          editorProjectJson,
-          mjmlSource,
-          htmlOutput,
-        }),
-      });
-
-      const body = await res.json().catch(() => null) as {
-        ok?: boolean;
-        data?: { id?: string; updatedAt?: string };
-        error?: { message?: string };
-      } | null;
-
-      if (!res.ok || !body?.ok || !body.data?.id) {
-        throw new Error(body?.error?.message || "Failed to save template");
-      }
-
-      setTemplateId(body.data.id);
-      setSuccess(`Template saved${body.data.updatedAt ? ` at ${new Date(body.data.updatedAt).toLocaleString()}` : ""}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save template");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handlePreview() {
-    const editor = editorRef.current;
-    if (!editor) return;
-
-    setError("");
-    try {
-      const exported = buildExportFromCommands(editor);
-      const previewHtml = exported.html?.trim();
-      if (!previewHtml?.trim()) {
-        throw new Error("Preview failed: generated HTML is empty");
-      }
-
-      const previewWindow = window.open("", "_blank");
-      if (!previewWindow) {
-        throw new Error("Preview blocked by browser popup settings");
-      }
-
-      const documentHtml = `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Template Preview</title>
-    <style>
-      body { margin: 0; background: #f3f4f6; }
-    </style>
-  </head>
-  <body>${previewHtml}</body>
-</html>`;
-
-      previewWindow.document.open();
-      previewWindow.document.write(documentHtml);
-      previewWindow.document.close();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Preview failed: unable to render HTML");
-    }
+  function pick(mode: EditorMode) {
+    router.push(`/templates/editor/${mode}`);
   }
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-5">
-      {/* Top bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link
-            href="/templates"
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            {t("back")}
-          </Link>
-          <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
-          <h1 className="truncate text-[18px] font-semibold tracking-tight text-foreground">
-            {name.trim() || t("title")}
+    <div className="flex min-h-dvh flex-col bg-[#F8FAFC] dark:bg-[#0B0E11] animate-[fadeIn_220ms_ease-out]">
+      <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 dark:border-[#1F2937] dark:bg-[#161B22] sm:px-6">
+        <Link
+          href="/templates"
+          className="inline-flex h-9 items-center gap-1.5 rounded-[14px] border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-[#1F2937] dark:bg-[#161B22] dark:text-slate-200 dark:hover:bg-[#1F2937]"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          {t("back")}
+        </Link>
+
+        <Stepper
+          steps={[
+            { label: t("chooser.stepSettings"), state: "done" },
+            { label: t("chooser.stepDesign"), state: "active" },
+            { label: t("chooser.stepReview"), state: "todo" },
+          ]}
+        />
+
+        <Button size="md" disabled className="rounded-[14px] opacity-60">
+          {t("chooser.continue")}
+        </Button>
+      </header>
+
+      <main className="flex flex-1 flex-col items-center px-4 py-12 sm:px-6 sm:py-16">
+        <div className="mx-auto w-full max-w-5xl text-center">
+          <h1 className="text-[28px] font-bold tracking-tight text-slate-950 dark:text-slate-50 sm:text-[32px]">
+            {t("chooser.title")}
           </h1>
+          <p className="mt-3 text-[15px] text-slate-500 dark:text-slate-400">
+            {t("chooser.subtitle")}
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => runEditorCommand("core:undo")}
-            disabled={initializing}
-            leftIcon={<Undo2 className="h-3.5 w-3.5" />}
-          >
-            {t("undo")}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => runEditorCommand("core:redo")}
-            disabled={initializing}
-            leftIcon={<Redo2 className="h-3.5 w-3.5" />}
-          >
-            {t("redo")}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void handlePreview()}
-            disabled={initializing}
-            leftIcon={<ExternalLink className="h-3.5 w-3.5" />}
-          >
-            {t("preview")}
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => void handleSave()}
-            loading={saving}
-            disabled={initializing || !name.trim()}
-            leftIcon={<Save className="h-3.5 w-3.5" />}
-          >
-            {t("save")}
-          </Button>
-        </div>
-      </div>
 
-      {/* Name + subject */}
-      <Card className="p-4 sm:p-5" hover={false}>
-        <div className="grid gap-3 md:grid-cols-2 md:items-end">
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium text-foreground">{t("templateNameLabel")}</span>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("templateNamePlaceholder")}
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium text-foreground">{t("subjectLabel")}</span>
-            <Input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder={t("subjectPlaceholder")}
-            />
-          </label>
+        <div className="mx-auto mt-12 grid w-full max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <ModeCard
+            tone="indigo"
+            icon={<LayoutTemplate className="h-5 w-5" strokeWidth={2.1} />}
+            title={t("chooser.drag.name")}
+            description={t("chooser.drag.description")}
+            cta={t("chooser.start")}
+            onClick={() => pick("drag")}
+          />
+          <ModeCard
+            tone="emerald"
+            icon={<Type className="h-5 w-5" strokeWidth={2.1} />}
+            title={t("chooser.rich.name")}
+            description={t("chooser.rich.description")}
+            cta={t("chooser.start")}
+            onClick={() => pick("rich")}
+          />
+          <ModeCard
+            tone="amber"
+            icon={<Code2 className="h-5 w-5" strokeWidth={2.1} />}
+            title="HTML Code"
+            description="Hand-write raw HTML with a live side-by-side preview."
+            cta={t("chooser.start")}
+            onClick={() => pick("code")}
+          />
         </div>
-        {error ? <Alert variant="destructive" className="mt-3">{error}</Alert> : null}
-        {success ? <Alert variant="success" className="mt-3">{success}</Alert> : null}
-      </Card>
+      </main>
 
-      {/* Workspace */}
-      <Card className="relative overflow-hidden p-0" hover={false}>
-        <div className="mjml-editor-shell grid h-[72vh] grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)_300px]">
-          <aside className="border-b border-border/70 bg-[hsl(var(--muted)/0.4)] md:border-b-0 md:border-r">
-            <div className="border-b border-border/70 px-4 py-3">
-              <p className="text-[13px] font-semibold tracking-tight text-foreground">
-                {t("blocksTitle")}
-              </p>
-              <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-                {t("blocksDescription")}
-              </p>
-            </div>
-            <div ref={blocksRef} className="h-[220px] overflow-y-auto p-2 md:h-[calc(72vh-64px)]" />
-          </aside>
-          <div className="relative h-[72vh] min-w-0 bg-slate-100/70">
-            <div ref={mountRef} className="h-[72vh] min-w-0" />
-            <div className="pointer-events-none absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/90 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-[0_1px_2px_hsl(var(--foreground)/0.04)] backdrop-blur">
-              <span className="text-muted-foreground">{t("selected")}:</span>
-              <span className="font-semibold text-foreground">
-                {selectedBlockLabel || t("selectedNone")}
-              </span>
-            </div>
-          </div>
-          <aside className="border-t border-border/70 bg-[hsl(var(--muted)/0.4)] md:border-l md:border-t-0">
-            <div className="border-b border-border/70 px-4 py-3">
-              <p className="text-[13px] font-semibold tracking-tight text-foreground">
-                {t("blockSettingsTitle")}
-              </p>
-              <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-                {t("blockSettingsDescription")}
-              </p>
-            </div>
-            {isImageSelected ? (
-              <div className="space-y-2 border-b border-border/70 p-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    {t("imageSection")}
-                  </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    className="h-7 px-2 text-[11.5px]"
-                    loading={imageUploading}
-                    onClick={() => imageInputRef.current?.click()}
-                    leftIcon={<ImageUp className="h-3 w-3" />}
-                  >
-                    {t("imageUpload")}
-                  </Button>
-                </div>
-                <label className="grid gap-1 text-xs text-muted-foreground">
-                  <span>{t("imageUrlLabel")}</span>
-                  <Input
-                    value={imageUrl}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setImageUrl(value);
-                      updateSelectedImageAttributes({ src: value });
-                    }}
-                    placeholder="https://..."
-                    className="h-8 text-xs"
-                  />
-                </label>
-                <label className="grid gap-1 text-xs text-muted-foreground">
-                  <span>{t("imageAltLabel")}</span>
-                  <Input
-                    value={imageAlt}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setImageAlt(value);
-                      updateSelectedImageAttributes({ alt: value });
-                    }}
-                    placeholder={t("imageAltPlaceholder")}
-                    className="h-8 text-xs"
-                  />
-                </label>
-                <label className="grid gap-1 text-xs text-muted-foreground">
-                  <span>{t("imageLinkLabel")}</span>
-                  <Input
-                    value={imageLink}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setImageLink(value);
-                      updateSelectedImageAttributes({ href: value });
-                    }}
-                    placeholder="https://example.com"
-                    className="h-8 text-xs"
-                  />
-                </label>
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml"
-                  className="hidden"
-                  onChange={(event) => void handleImageUploadFromInput(event)}
-                />
-              </div>
-            ) : null}
-            <div className="h-[240px] overflow-y-auto border-b border-border/70 p-3 md:h-[calc((72vh-64px)/2)]">
-              <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {t("contentSection")}
-              </p>
-              <div ref={traitsRef} />
-            </div>
-            <div className="h-[240px] overflow-y-auto p-3 md:h-[calc((72vh-64px)/2)]">
-              <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {t("styleSection")}
-              </p>
-              <div ref={stylesRef} />
-            </div>
-          </aside>
-        </div>
-        {initializing ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 text-sm text-muted-foreground backdrop-blur-sm">
-            {t("loadingEditor")}
-          </div>
-        ) : null}
-      </Card>
       <style jsx global>{`
-        .mjml-editor-shell .gjs-blocks-c {
-          display: grid;
-          gap: 8px;
-        }
-        .mjml-editor-shell .gjs-pn-panels {
-          display: none;
-        }
-        .mjml-editor-shell .gjs-cv-canvas {
-          width: 100%;
-          height: 100%;
-          top: 0;
-        }
-        .mjml-editor-shell .gjs-editor,
-        .mjml-editor-shell .gjs-cv-canvas {
-          background: transparent;
-        }
-        .mjml-editor-shell .gjs-block {
-          width: 100%;
-          min-height: auto;
-          margin: 0;
-          border: 1px solid #e5e7eb;
-          border-radius: 10px;
-          background: #ffffff;
-          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-        }
-        .mjml-editor-shell .gjs-block:hover {
-          border-color: #93c5fd;
-          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
-        }
-        .mjml-editor-shell .gjs-block-label {
-          font-size: 13px;
-          padding: 10px 8px;
-          color: #111827;
-        }
-        .mjml-editor-shell .gjs-block-category {
-          border: 0;
-          background: transparent;
-          margin: 2px 0 0;
-        }
-        .mjml-editor-shell .gjs-title {
-          border: 0;
-          background: transparent;
-          padding: 6px 4px;
-          color: #6b7280;
-        }
-        .mjml-editor-shell .gjs-sm-sectors,
-        .mjml-editor-shell .gjs-trt-traits {
-          border: 0;
-          background: transparent;
-        }
-        .mjml-editor-shell .gjs-trt-trait,
-        .mjml-editor-shell .gjs-sm-sector {
-          margin-bottom: 8px;
-          border: 1px solid #e5e7eb;
-          border-radius: 10px;
-          background: #ffffff;
-          padding: 8px;
-        }
-        .mjml-editor-shell .gjs-sm-properties {
-          padding: 6px 0 0;
-        }
-        .mjml-editor-shell .gjs-sm-label {
-          color: #6b7280;
-          font-size: 12px;
-          min-width: 90px;
-        }
-        .mjml-editor-shell .gjs-field,
-        .mjml-editor-shell .gjs-clm-tags {
-          border-radius: 8px;
-          border: 1px solid #d1d5db;
-          background: #ffffff;
-        }
-        .mjml-editor-shell .gjs-trt-trait .gjs-field {
-          background: #ffffff;
-          color: #111827;
-        }
-        .mjml-editor-shell .gjs-one-bg,
-        .mjml-editor-shell .gjs-two-color,
-        .mjml-editor-shell .gjs-three-bg {
-          background: transparent;
-          color: inherit;
-        }
-        .mjml-editor-shell .gjs-four-color,
-        .mjml-editor-shell .gjs-color-warn,
-        .mjml-editor-shell .gjs-color-highlight {
-          color: inherit;
-        }
-        .mjml-editor-shell .gjs-sm-sector-title,
-        .mjml-editor-shell .gjs-title {
-          font-size: 12px;
-          letter-spacing: 0.02em;
-          text-transform: uppercase;
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.985); }
+          to   { opacity: 1; transform: scale(1); }
         }
       `}</style>
     </div>
+  );
+}
+
+function Stepper({
+  steps,
+}: {
+  steps: Array<{ label: string; state: "done" | "active" | "todo" }>;
+}) {
+  return (
+    <ol className="hidden items-center gap-3 md:flex">
+      {steps.map((step, idx) => (
+        <li key={step.label} className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-bold transition-colors",
+                step.state === "done" && "bg-emerald-500 text-white",
+                step.state === "active" && "bg-indigo-600 text-white",
+                step.state === "todo" && "border border-slate-200 bg-white text-slate-400 dark:border-[#1F2937] dark:bg-[#161B22]",
+              )}
+            >
+              {step.state === "done" ? <Check className="h-3.5 w-3.5" /> : idx + 1}
+            </span>
+            <span
+              className={cn(
+                "text-[13px] font-semibold tracking-tight",
+                step.state === "todo" ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-slate-100",
+              )}
+            >
+              {step.label}
+            </span>
+          </div>
+          {idx < steps.length - 1 && (
+            <span className="h-px w-10 bg-slate-200 dark:bg-[#1F2937]" aria-hidden />
+          )}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ModeCard({
+  tone,
+  icon,
+  title,
+  description,
+  cta,
+  onClick,
+}: {
+  tone: "indigo" | "emerald" | "amber";
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  cta: string;
+  onClick: () => void;
+}) {
+  const toneClass = {
+    indigo: "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300",
+    emerald: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300",
+    amber: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300",
+  }[tone];
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group flex flex-col items-start gap-5 rounded-[32px] border border-slate-100 bg-white p-7 text-left transition-all duration-250",
+        "hover:-translate-y-1 hover:scale-[1.01] hover:border-indigo-200 hover:shadow-[0_24px_48px_-24px_rgba(79,70,229,0.35)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40",
+        "dark:border-[#1F2937] dark:bg-[#161B22] dark:hover:border-indigo-500/40 dark:hover:shadow-[0_24px_48px_-24px_rgba(99,102,241,0.45)]",
+      )}
+    >
+      <span className={cn("flex h-12 w-12 items-center justify-center rounded-2xl", toneClass)}>
+        {icon}
+      </span>
+      <div className="space-y-2">
+        <h3 className="text-[18px] font-bold tracking-tight text-slate-950 dark:text-slate-50">
+          {title}
+        </h3>
+        <p className="text-[14px] leading-relaxed text-slate-500 dark:text-slate-400">
+          {description}
+        </p>
+      </div>
+      <div className="mt-auto inline-flex w-full items-center gap-1.5 border-t border-slate-100 pt-4 text-[13.5px] font-semibold text-indigo-600 transition-colors group-hover:gap-2 dark:border-[#1F2937] dark:text-indigo-300">
+        {cta}
+        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+      </div>
+    </button>
   );
 }
