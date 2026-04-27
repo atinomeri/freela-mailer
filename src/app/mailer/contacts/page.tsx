@@ -18,18 +18,9 @@ import {
   ModalBody,
   ModalFooter,
 } from "@/components/ui/modal";
-import {
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  Search,
-  Trash2,
-  Upload,
-  Users,
-} from "lucide-react";
+import { Plus, Search, Trash2, Upload, Users } from "lucide-react";
 import { MailerLoginPage } from "../login-page";
 import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
 
 interface ContactList {
   id: string;
@@ -69,11 +60,6 @@ export default function ContactsPage() {
   // Delete state
   const [deleteListId, setDeleteListId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  // Expand state
-  const [expandedList, setExpandedList] = useState<string | null>(null);
-  const [contacts, setContacts] = useState<{ email: string; data: Record<string, string> }[]>([]);
-  const [contactsLoading, setContactsLoading] = useState(false);
 
   const loadLists = useCallback(async () => {
     try {
@@ -194,29 +180,6 @@ export default function ContactsPage() {
     }
   }
 
-  async function toggleExpand(listId: string) {
-    if (expandedList === listId) {
-      setExpandedList(null);
-      setContacts([]);
-      return;
-    }
-
-    setExpandedList(listId);
-    setContactsLoading(true);
-
-    try {
-      const res = await apiFetch(`/api/desktop/contact-lists/${listId}/contacts?limit=20`);
-      if (res.ok) {
-        const data = await res.json();
-        setContacts(data.data ?? []);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setContactsLoading(false);
-    }
-  }
-
   const hasLists = lists.length > 0;
   const hasFilters = search.trim() !== "";
 
@@ -226,13 +189,23 @@ export default function ContactsPage() {
         title={t("contacts.title")}
         description={t("contacts.description")}
         actions={
-          <Button
-            size="md"
-            onClick={() => setShowCreate(true)}
-            leftIcon={<Plus className="h-4 w-4" />}
+          <div
+            className={
+              hasLists
+                ? "max-w-[220px] opacity-100 transition-[max-width,opacity] duration-200"
+                : "pointer-events-none max-w-0 overflow-hidden opacity-0 transition-[max-width,opacity] duration-200"
+            }
+            aria-hidden={!hasLists}
           >
-            {t("contacts.newListAction")}
-          </Button>
+            <Button
+              size="md"
+              onClick={() => setShowCreate(true)}
+              leftIcon={<Plus className="h-4 w-4" />}
+              tabIndex={hasLists ? undefined : -1}
+            >
+              {t("contacts.newListAction")}
+            </Button>
+          </div>
         }
       />
 
@@ -297,127 +270,51 @@ export default function ContactsPage() {
           />
         </SectionCard>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,240px))] gap-4">
           {filteredLists.map((list) => {
-            const isExpanded = expandedList === list.id;
             return (
-              <SectionCard key={list.id} padded bodyClassName="p-4 sm:p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <button
-                    type="button"
-                    className="group flex min-w-0 flex-1 items-center gap-3 text-left"
-                    onClick={() => toggleExpand(list.id)}
-                    aria-expanded={isExpanded}
-                    aria-controls={`list-${list.id}-contacts`}
-                  >
-                    <span
-                      className={cn(
-                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 transition-colors",
-                        isExpanded
-                          ? "bg-primary/10 text-primary ring-primary/15"
-                          : "bg-muted text-muted-foreground ring-border group-hover:bg-foreground/5",
-                      )}
-                      aria-hidden
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4" strokeWidth={2.2} />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" strokeWidth={2.2} />
-                      )}
-                    </span>
-                    <div className="min-w-0">
-                      <h3 className="truncate text-[14.5px] font-semibold tracking-tight text-foreground">
-                        {list.name}
-                      </h3>
-                      <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-                        {t("contacts.contactsCount", { count: list.contactCount })}
-                        {list.columns.length > 0 && (
-                          <>
-                            <span className="mx-1.5 text-border">·</span>
-                            <span className="truncate">
-                              {t("contacts.columnsPrefix")} {list.columns.join(", ")}
-                            </span>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                  </button>
-
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        setUploadListId(list.id);
-                        fileRef.current?.click();
-                      }}
-                      leftIcon={<Upload className="h-3.5 w-3.5" />}
-                    >
-                      {t("contacts.uploadAction")}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteListId(list.id)}
-                      leftIcon={<Trash2 className="h-3.5 w-3.5 text-destructive" />}
-                      className="text-destructive hover:bg-destructive/5 hover:text-destructive"
-                    >
-                      {t("contacts.deleteAction")}
-                    </Button>
+              <div
+                key={list.id}
+                className="group flex min-h-[244px] w-[240px] flex-col rounded-[32px] border-2 border-slate-100 bg-white p-5 transition-all duration-250 hover:-translate-y-1 hover:border-indigo-600 hover:shadow-[0_20px_25px_-5px_rgba(79,70,229,0.10)] dark:border-[#30363D] dark:bg-[#161B22] dark:hover:border-primary/40"
+              >
+                <div className="flex flex-1 flex-col items-center justify-center text-center">
+                  <div className="text-[34px] font-extrabold leading-none tracking-tight tabular-nums text-slate-950 dark:text-foreground">
+                    {formatNumber(list.contactCount)}
                   </div>
+                  <h3 className="mt-3 line-clamp-2 text-[17px] font-bold leading-tight text-slate-950 dark:text-foreground">
+                    {list.name}
+                  </h3>
+                  <p className="mt-1.5 max-w-full truncate text-[12px] font-medium text-slate-500 dark:text-muted-foreground">
+                    {list.columns.length > 0
+                      ? `${t("contacts.columnsPrefix")} ${list.columns.join(", ")}`
+                      : t("contacts.contactsCount", { count: list.contactCount })}
+                  </p>
                 </div>
 
-                {/* Expanded contacts preview */}
-                {isExpanded && (
-                  <div id={`list-${list.id}-contacts`} className="mt-4 border-t border-border/60 pt-4">
-                    {contactsLoading ? (
-                      <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-                    ) : contacts.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">{t("contacts.noContactsYet")}</p>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-[13px]">
-                          <thead>
-                            <tr className="border-b border-border/60 text-left text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                              <th className="pb-2 pr-4">{t("contacts.columns.email")}</th>
-                              {list.columns
-                                .filter((c) => c.toLowerCase() !== list.emailColumn.toLowerCase())
-                                .slice(0, 4)
-                                .map((col) => (
-                                  <th key={col} className="pb-2 pr-4">
-                                    {col}
-                                  </th>
-                                ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-border/50">
-                            {contacts.map((contact, i) => (
-                              <tr key={i}>
-                                <td className="py-2 pr-4 font-medium text-foreground">
-                                  {contact.email}
-                                </td>
-                                {list.columns
-                                  .filter((c) => c.toLowerCase() !== list.emailColumn.toLowerCase())
-                                  .slice(0, 4)
-                                  .map((col) => (
-                                    <td key={col} className="py-2 pr-4 text-muted-foreground">
-                                      {contact.data?.[col] ?? "—"}
-                                    </td>
-                                  ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                        {list.contactCount > 20 && (
-                          <p className="mt-2 text-[12px] text-muted-foreground">
-                            {t("contacts.showingOf", { shown: 20, total: list.contactCount })}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </SectionCard>
+                <div className="mt-4 flex flex-col gap-2 border-t border-slate-50 pt-4 dark:border-[#30363D]">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setUploadListId(list.id);
+                      fileRef.current?.click();
+                    }}
+                    leftIcon={<Upload className="h-3.5 w-3.5" />}
+                    className="h-9 min-h-9 w-full px-3 text-[12px]"
+                  >
+                    {t("contacts.uploadAction")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeleteListId(list.id)}
+                    leftIcon={<Trash2 className="h-3.5 w-3.5 text-destructive" />}
+                    className="h-9 min-h-9 w-full px-3 text-[12px] text-destructive hover:bg-destructive/5 hover:text-destructive"
+                  >
+                    {t("contacts.deleteAction")}
+                  </Button>
+                </div>
+              </div>
             );
           })}
         </div>

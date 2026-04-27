@@ -165,13 +165,23 @@ export default function CampaignsPage() {
   }
 
   const primaryCta = (
-    <ButtonLink
-      href="/campaigns/new"
-      size="md"
-      leftIcon={<Plus className="h-4 w-4" />}
+    <div
+      className={
+        hasCampaignsOnServer
+          ? "max-w-[220px] opacity-100 transition-[max-width,opacity] duration-200"
+          : "pointer-events-none max-w-0 overflow-hidden opacity-0 transition-[max-width,opacity] duration-200"
+      }
+      aria-hidden={!hasCampaignsOnServer}
     >
-      {t("actions.newCampaign")}
-    </ButtonLink>
+      <ButtonLink
+        href="/campaigns/new"
+        size="md"
+        leftIcon={<Plus className="h-4 w-4" />}
+        tabIndex={hasCampaignsOnServer ? undefined : -1}
+      >
+        {t("actions.newCampaign")}
+      </ButtonLink>
+    </div>
   );
 
   return (

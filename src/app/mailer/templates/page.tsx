@@ -2,6 +2,7 @@
 
 import { useMailerAuth } from "@/lib/mailer-auth";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,6 +62,14 @@ export default function MailerTemplatesPage() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
+  const router = useRouter();
+
+  function handleCreateNew() {
+    setRedirecting(true);
+    router.push("/templates/editor");
+  }
+  // /templates/editor now shows the 3-card chooser; sub-routes are /drag, /rich, /code.
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -188,24 +197,23 @@ export default function MailerTemplatesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 lg:space-y-8">
+    <div className="mx-auto max-w-6xl space-y-10">
       <PageHeader
         title={t("templates.title")}
         description={t("templates.description")}
         actions={
-          <div className="flex items-center gap-2">
-            <ButtonLink href="/templates/editor" variant="secondary" size="md">
-              {t("templates.openEditor")}
-            </ButtonLink>
-            <Button size="md" onClick={openCreateModal} leftIcon={<Plus className="h-4 w-4" />}>
-              {t("templates.newTemplate")}
-            </Button>
-          </div>
+          items.length > 0 && !loading ? (
+            <div className="flex items-center gap-2">
+              <Button size="md" onClick={handleCreateNew} loading={redirecting} leftIcon={<Plus className="h-4 w-4" />}>
+                {t("templates.newTemplate")}
+              </Button>
+            </div>
+          ) : null
         }
       />
 
       {error && (
-        <Alert variant="destructive" onDismiss={() => setError("")} dismissLabel={t("actions.dismiss")}>
+        <Alert variant="destructive" onDismiss={() => setError("")} dismissLabel={t("actions.dismiss")} className="rounded-2xl bg-red-50 text-red-600 font-sans items-center">
           {error}
         </Alert>
       )}
@@ -220,7 +228,7 @@ export default function MailerTemplatesPage() {
             icon={<FileText strokeWidth={1.8} />}
             title={t("templates.noTemplatesAtAll")}
             description={t("templates.noTemplatesAtAllDescription")}
-            action={{ label: t("templates.newTemplate"), onClick: openCreateModal }}
+            action={{ label: t("templates.newTemplate"), onClick: handleCreateNew, loading: redirecting }}
           />
         </SectionCard>
       ) : (
@@ -237,11 +245,11 @@ export default function MailerTemplatesPage() {
                 icon={<FileText strokeWidth={1.8} />}
                 title={t("templates.noCustomTitle")}
                 description={t("templates.noCustomDescription")}
-                action={{ label: t("templates.newTemplate"), onClick: openCreateModal }}
+                action={{ label: t("templates.newTemplate"), onClick: handleCreateNew, loading: redirecting }}
                 className="border-0 bg-transparent"
               />
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
                 {customTemplates.map((tpl) => (
                   <TemplateCard
                     key={tpl.id}
@@ -269,7 +277,7 @@ export default function MailerTemplatesPage() {
               padded={false}
               bodyClassName="p-4 sm:p-5"
             >
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
                 {starterTemplates.map((tpl) => (
                   <TemplateCard
                     key={tpl.id}
@@ -364,37 +372,37 @@ function TemplateCard({
   return (
     <div
       className={cn(
-        "group flex flex-col rounded-2xl border border-border/70 bg-card",
-        "shadow-[0_1px_2px_hsl(var(--foreground)/0.04)]",
-        "transition-colors hover:border-foreground/15",
+        "group flex flex-col rounded-[32px] border-2 border-slate-100 bg-white",
+        "transition-all duration-250 hover:-translate-y-1 hover:border-indigo-600 hover:shadow-[0_20px_25px_-5px_rgba(79,70,229,0.10)]",
+        "dark:border-border dark:bg-card dark:hover:border-primary/40",
       )}
     >
-      <div className="aspect-[16/9] overflow-hidden rounded-t-2xl border-b border-border/60 bg-[hsl(var(--muted)/0.5)]">
+      <div className="aspect-[16/9] overflow-hidden rounded-t-[30px] border-b border-slate-100 bg-slate-50 dark:border-border/60 dark:bg-[hsl(var(--muted)/0.5)]">
         <TemplatePreview html={template.html} />
       </div>
-      <div className="flex flex-1 flex-col gap-3 p-4">
+      <div className="flex flex-1 flex-col gap-4 p-6">
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="min-w-0 flex-1 truncate text-[14.5px] font-semibold tracking-tight text-foreground">
+            <h3 className="min-w-0 flex-1 truncate text-xl font-bold tracking-normal text-slate-950 dark:text-foreground">
               {template.name}
             </h3>
             {isStarter && (
-              <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-primary">
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.12em] text-indigo-600 dark:border-primary/20 dark:bg-primary/10 dark:text-primary">
                 <Sparkles className="h-3 w-3" />
               </span>
             )}
           </div>
-          <p className="mt-1 truncate text-[12.5px] text-muted-foreground">
+          <p className="mt-2 truncate text-sm font-medium text-slate-500 dark:text-muted-foreground">
             {template.subject || t("templates.noSubject")}
           </p>
           {template.description && (
-            <p className="mt-1 line-clamp-2 text-[12px] text-muted-foreground">
+            <p className="mt-2 line-clamp-2 text-[13px] font-medium leading-relaxed text-slate-500 dark:text-muted-foreground">
               {template.description}
             </p>
           )}
         </div>
         {(onEdit || onDelete) && (
-          <div className="flex items-center gap-2 border-t border-border/60 pt-3">
+          <div className="flex items-center gap-2 border-t border-slate-50 pt-5 dark:border-border/60">
             {onEdit && (
               <Button
                 variant="secondary"

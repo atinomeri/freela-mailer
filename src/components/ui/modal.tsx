@@ -70,7 +70,7 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
         style={{ animation: "modal-overlay-in 150ms ease-out" }}
       >
         {/* Backdrop */}
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-sm" />
         {/* Content */}
         {children}
       </div>
@@ -101,7 +101,7 @@ export function ModalContent({ children, className, size = "md" }: ModalContentP
   return (
     <div
       className={cn(
-        "relative z-10 w-full rounded-xl border border-border bg-card shadow-xl",
+        "relative z-10 w-full rounded-[32px] border-2 border-slate-100 bg-white shadow-2xl shadow-slate-950/10 dark:border-border dark:bg-card",
         sizeClasses[size],
         className
       )}
@@ -128,12 +128,12 @@ export function ModalHeader({ children, className, showClose = true }: ModalHead
   const { onClose } = useModalContext();
 
   return (
-    <div className={cn("flex items-center justify-between border-b border-border px-6 py-4", className)}>
-      <div className="text-lg font-semibold">{children}</div>
+    <div className={cn("flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-border", className)}>
+      <div className="text-lg font-bold text-slate-950 dark:text-foreground">{children}</div>
       {showClose && (
         <button
           onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-950 dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-foreground"
         >
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
@@ -167,7 +167,7 @@ interface ModalFooterProps {
 
 export function ModalFooter({ children, className }: ModalFooterProps) {
   return (
-    <div className={cn("flex items-center justify-end gap-3 border-t border-border px-6 py-4", className)}>
+    <div className={cn("flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-5 dark:border-border", className)}>
       {children}
     </div>
   );

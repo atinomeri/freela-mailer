@@ -9,6 +9,7 @@
       "smtpPool": "Аккаунты отправки",
       "settings": "Настройки",
       "reports": "Отчёты",
+      "analytics": "Аналитика",
       "billing": "Биллинг",
       "admin": "Админ"
     },
@@ -241,7 +242,44 @@
       "imageAltPlaceholder": "Опишите изображение",
       "imageLinkLabel": "URL ссылки",
       "contentSection": "Содержимое",
-      "styleSection": "Стиль"
+      "styleSection": "Стиль",
+      "chooser": {
+        "stepSettings": "Настройки",
+        "stepDesign": "Дизайн",
+        "stepReview": "Проверка",
+        "continue": "Продолжить",
+        "title": "Как вы хотите собрать письмо?",
+        "subtitle": "Выберите готовый режим или начните с нуля.",
+        "start": "Начать",
+        "drag": {
+          "name": "Drag & Drop Builder",
+          "description": "Лучше всего для маркетинговых писем. Без кода."
+        },
+        "rich": {
+          "name": "Rich Text Editor",
+          "description": "Чистые персональные письма. Как редактор Gmail."
+        },
+        "code": {
+          "name": "HTML / MJML Код",
+          "description": "Для профессиональных разработчиков. Полный контроль над кодом."
+        }
+      },
+      "autoSaving": "Автосохранение…",
+      "savedAt": "Сохранено {time}",
+      "savedJustNow": "Только что сохранено",
+      "sectionDimensions": "Размеры",
+      "sectionTypography": "Типографика",
+      "sectionDecorations": "Оформление",
+      "richEditor": {
+        "title": "Напишите письмо",
+        "placeholder": "Начните писать..."
+      },
+      "codeEditor": {
+        "title": "Исходник MJML",
+        "previewTitle": "Превью в реальном времени",
+        "rendering": "Загружаем превью...",
+        "renderError": "Не удалось отобразить превью"
+      }
     },
     "templates": {
       "title": "Шаблоны",

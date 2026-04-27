@@ -25,21 +25,22 @@ export function SectionCard({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border border-border/70 bg-card",
-        "shadow-[0_1px_2px_hsl(var(--foreground)/0.04)]",
+        "overflow-hidden rounded-[32px] border-2 border-slate-100 bg-white",
+        "shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all duration-250",
+        "dark:border-border dark:bg-card",
         className,
       )}
     >
       {hasHeader && (
-        <div className="flex flex-col gap-2 border-b border-border/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex flex-col gap-3 border-b border-slate-100 bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between dark:border-border dark:bg-card">
           <div className="min-w-0">
             {title && (
-              <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
+              <h2 className="text-[17px] font-bold tracking-normal text-slate-950 dark:text-foreground">
                 {title}
               </h2>
             )}
             {description && (
-              <p className="mt-0.5 text-sm leading-5 text-muted-foreground">
+              <p className="mt-1 text-sm font-medium leading-5 text-slate-500 dark:text-muted-foreground">
                 {description}
               </p>
             )}

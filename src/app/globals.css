@@ -12,16 +12,16 @@
 
 :root {
   color-scheme: light;
-  /* Design system: SaaS / FinTech minimal palette */
-  --ds-primary: 225 84% 56%;
+  /* Design system: calm business SaaS palette */
+  --ds-primary: 243 75% 59%;
   --ds-dark: 222 47% 11%;
-  --ds-accent: 186 85% 42%;
-  --ds-background: 0 0% 100%;
+  --ds-accent: 160 84% 39%;
+  --ds-background: 210 40% 98%;
 
   /* Typography scale */
-  --font-size-h1: clamp(2.125rem, 1.5rem + 2.2vw, 3.25rem);
-  --font-size-h2: clamp(1.625rem, 1.25rem + 1.35vw, 2.375rem);
-  --font-size-h3: clamp(1.25rem, 1.1rem + 0.85vw, 1.75rem);
+  --font-size-h1: clamp(1.75rem, 1.45rem + 1.1vw, 2.375rem);
+  --font-size-h2: clamp(1.375rem, 1.18rem + 0.75vw, 1.875rem);
+  --font-size-h3: clamp(1.125rem, 1.02rem + 0.45vw, 1.375rem);
   --font-size-body: 1rem;
   --font-size-small: 0.875rem;
   --line-height-heading: 1.18;
@@ -39,24 +39,24 @@
   --foreground: var(--ds-dark);
   --card: 0 0% 100%;
   --card-foreground: var(--ds-dark);
-  --muted: 220 18% 97%;
+  --muted: 210 40% 96%;
   --muted-foreground: 215 16% 47%;
   --primary: var(--ds-primary);
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 18% 97%;
+  --secondary: 210 40% 96%;
   --secondary-foreground: var(--ds-dark);
   --accent: var(--ds-accent);
   --accent-foreground: 0 0% 100%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --success: 142 76% 36%;
+  --success: 160 84% 39%;
   --success-foreground: 0 0% 100%;
   --warning: 38 92% 50%;
   --warning-foreground: 0 0% 100%;
   --ring: var(--ds-primary);
-  --border: 220 16% 94%;
-  --input: 220 16% 94%;
-  --radius: 12px;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --radius: 16px;
   
   /* Toast colors */
   --toast-bg: 0 0% 100%;
@@ -65,14 +65,14 @@
 
 .dark {
   color-scheme: dark;
-  --ds-primary: 225 90% 66%;
+  --ds-primary: 243 90% 70%;
   --ds-dark: 210 40% 98%;
-  --ds-accent: 186 88% 48%;
+  --ds-accent: 160 76% 46%;
   --ds-background: 222 47% 7%;
 
   --background: var(--ds-background);
   --foreground: var(--ds-dark);
-  --card: 222 47% 9%;
+  --card: 222 47% 10%;
   --card-foreground: 210 40% 98%;
   --muted: 217 33% 17%;
   --muted-foreground: 215 20% 65%;
@@ -84,7 +84,7 @@
   --accent-foreground: 222 47% 8%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --success: 142 70% 45%;
+  --success: 160 84% 39%;
   --success-foreground: 0 0% 100%;
   --warning: 38 92% 50%;
   --warning-foreground: 0 0% 100%;
@@ -93,8 +93,8 @@
   --input: 217 33% 20%;
   
   /* Toast colors */
-  --toast-bg: 222 47% 10%;
-  --toast-border: 217 33% 20%;
+  --toast-bg: 215 21% 11%;
+  --toast-border: 217 33% 17%;
 }
 
 html,
@@ -167,7 +167,6 @@ body {
 }
 
 body {
-  background-image: none;
   color: hsl(var(--foreground));
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -177,7 +176,7 @@ body {
 }
 
 .dark body {
-  background-image: none;
+  background: hsl(var(--background));
 }
 
 ::selection {

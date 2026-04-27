@@ -9,6 +9,7 @@
       "smtpPool": "Sending Accounts",
       "settings": "Settings",
       "reports": "Reports",
+      "analytics": "Analytics",
       "billing": "Billing",
       "admin": "Admin"
     },
@@ -241,7 +242,44 @@
       "imageAltPlaceholder": "Describe image",
       "imageLinkLabel": "Link URL",
       "contentSection": "Content",
-      "styleSection": "Style"
+      "styleSection": "Style",
+      "chooser": {
+        "stepSettings": "Settings",
+        "stepDesign": "Design",
+        "stepReview": "Review",
+        "continue": "Continue",
+        "title": "How would you like to build your email?",
+        "subtitle": "Choose a starting mode or start from scratch.",
+        "start": "Start",
+        "drag": {
+          "name": "Drag & Drop Builder",
+          "description": "Best for marketing emails. No code required."
+        },
+        "rich": {
+          "name": "Rich Text Editor",
+          "description": "Clean, personal emails. Looks like Gmail's editor."
+        },
+        "code": {
+          "name": "HTML / MJML Code",
+          "description": "For professional developers. Full control over the code."
+        }
+      },
+      "autoSaving": "Auto-saving…",
+      "savedAt": "Saved {time}",
+      "savedJustNow": "Saved just now",
+      "sectionDimensions": "Dimensions",
+      "sectionTypography": "Typography",
+      "sectionDecorations": "Decorations",
+      "richEditor": {
+        "title": "Write your email",
+        "placeholder": "Start writing your message..."
+      },
+      "codeEditor": {
+        "title": "MJML source",
+        "previewTitle": "Live preview",
+        "rendering": "Rendering preview...",
+        "renderError": "Could not render preview"
+      }
     },
     "templates": {
       "title": "Templates",

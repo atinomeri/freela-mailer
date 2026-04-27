@@ -5,3 +5,16 @@ node_modules
 coverage
 /data
 *.tsbuildinfo
+
+# Editor / IDE
+.vscode/
+
+# Local dev logs and one-off scratch files
+*.log
+.codex-next-dev.log
+.codex-next-dev.err.log
+scratch.cjs
+seed_user.mjs
+seed_user_pg.mjs
+gemini-code-*.html
+FREELA_MAILER_VISUAL_ARCHITECTURE_TASK.md

@@ -23,11 +23,11 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "border border-primary/70 bg-primary text-primary-foreground shadow-sm hover:-translate-y-0.5 hover:bg-primary/94 hover:shadow-soft-lg active:translate-y-0 active:shadow-soft",
+    "border border-indigo-600 bg-indigo-600 text-white shadow-none hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-[0_0_15px_rgba(79,70,229,0.2)] active:translate-y-0 dark:border-primary dark:bg-primary dark:text-primary-foreground dark:shadow-none",
   secondary:
-    "border border-border/70 bg-card text-secondary-foreground shadow-sm hover:-translate-y-0.5 hover:border-border/60 hover:bg-secondary hover:shadow-soft active:translate-y-0 active:shadow-sm",
+    "border border-slate-200 bg-white text-slate-900 shadow-sm hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-slate-50 hover:shadow-lg hover:shadow-slate-200/50 active:translate-y-0 dark:border-border dark:bg-card dark:text-secondary-foreground dark:hover:bg-secondary",
   ghost:
-    "border border-transparent bg-transparent text-foreground/90 hover:-translate-y-0.5 hover:border-border/60 hover:bg-muted/55 hover:text-foreground hover:shadow-sm active:translate-y-0 active:shadow-none",
+    "border border-transparent bg-transparent text-slate-600 hover:-translate-y-0.5 hover:bg-slate-50 hover:text-slate-950 active:translate-y-0 active:shadow-none dark:text-foreground/90 dark:hover:border-border dark:hover:bg-muted/65 dark:hover:text-foreground",
   destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 hover:shadow-soft active:shadow-sm",
   outline: "border border-border/80 bg-transparent text-foreground hover:border-border hover:bg-muted/45",
   link: "text-primary underline-offset-4 hover:underline p-0 h-auto"
@@ -41,7 +41,7 @@ const sizeClasses: Record<ButtonSize, string> = {
 };
 
 const baseClasses = cn(
-  "btn-haptic inline-flex items-center justify-center whitespace-nowrap rounded-xl font-semibold",
+  "btn-haptic inline-flex items-center justify-center whitespace-nowrap rounded-[14px] font-medium font-sans",
   "transition-all duration-250 ease-out will-change-transform",
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
   "disabled:pointer-events-none disabled:opacity-50",

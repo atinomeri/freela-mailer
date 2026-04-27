@@ -29,6 +29,7 @@ interface EmptyStateAction {
   label: string;
   onClick?: () => void;
   href?: string;
+  loading?: boolean;
 }
 
 interface EmptyStateProps {
@@ -55,7 +56,7 @@ function renderAction(action: EmptyStateAction, primary: boolean) {
     );
   }
   return (
-    <Button variant={variant} size={size} onClick={action.onClick}>
+    <Button variant={variant} size={size} onClick={action.onClick} loading={action.loading}>
       {action.label}
     </Button>
   );
@@ -87,11 +88,11 @@ export function EmptyState({
     return (
       <div
         className={cn(
-          "flex items-center gap-4 rounded-xl border border-dashed border-border bg-card p-4",
+          "flex items-center gap-4 rounded-2xl border-2 border-dashed border-slate-200 bg-white p-4 dark:border-border dark:bg-card",
           className,
         )}
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-muted dark:text-muted-foreground">
           {compactIcon}
         </div>
         <div className="min-w-0 flex-1">
@@ -108,22 +109,22 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/60 px-6 py-12 text-center",
+        "flex flex-col items-center justify-center rounded-[32px] border-2 border-dashed border-slate-200 bg-white px-6 py-12 text-center dark:border-border dark:bg-card/60",
         className,
       )}
     >
       <div className="relative">
         <div
-          className="absolute inset-0 -m-2 rounded-2xl bg-primary/5 blur-xl"
+          className="absolute inset-0 -m-2 rounded-2xl bg-indigo-50 blur-xl dark:bg-primary/5"
           aria-hidden
         />
-        <div className="relative flex h-12 w-12 items-center justify-center rounded-xl border border-border/70 bg-card text-primary shadow-[0_1px_2px_hsl(var(--foreground)/0.04)]">
+        <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 shadow-sm dark:border dark:border-border/70 dark:bg-card dark:text-primary">
           {defaultIcon}
         </div>
       </div>
-      <h3 className="mt-5 text-[15px] font-semibold tracking-tight text-foreground">{title}</h3>
+      <h3 className="mt-5 text-[17px] font-bold tracking-normal text-slate-950 dark:text-foreground">{title}</h3>
       {description && (
-        <p className="mt-1.5 max-w-md text-sm leading-[1.55] text-muted-foreground">
+        <p className="mt-2 max-w-md text-sm font-medium leading-[1.6] text-slate-500 dark:text-muted-foreground">
           {description}
         </p>
       )}

@@ -9,6 +9,7 @@
       "smtpPool": "გაგზავნის ანგარიშები",
       "settings": "პარამეტრები",
       "reports": "ანგარიშები",
+      "analytics": "ანალიტიკა",
       "billing": "ბილინგი",
       "admin": "ადმინი"
     },
@@ -241,7 +242,44 @@
       "imageAltPlaceholder": "აღწერე სურათი",
       "imageLinkLabel": "ბმულის URL",
       "contentSection": "შინაარსი",
-      "styleSection": "სტილი"
+      "styleSection": "სტილი",
+      "chooser": {
+        "stepSettings": "Settings",
+        "stepDesign": "Design",
+        "stepReview": "Review",
+        "continue": "Continue",
+        "title": "როგორ გსურთ იმეილის აწყობა?",
+        "subtitle": "აირჩიეთ მზა შაბლონი ან დაიწყეთ ნულიდან.",
+        "start": "დაწყება",
+        "drag": {
+          "name": "Drag & Drop Builder",
+          "description": "საუკეთესო მარკეტინგული იმეილებისთვის. არ საჭიროებს კოდის წერას."
+        },
+        "rich": {
+          "name": "Rich Text Editor",
+          "description": "სუფთა, პერსონალური იმეილები. ჰგავს ჩვეულებრივ Gmail-ის ედიტორს."
+        },
+        "code": {
+          "name": "HTML / MJML Koda",
+          "description": "პროფესიონალი დეველოპერებისთვის. სრული კონტროლი კოდზე."
+        }
+      },
+      "autoSaving": "ავტო-შენახვა…",
+      "savedAt": "შენახულია {time}",
+      "savedJustNow": "ახლახან შენახული",
+      "sectionDimensions": "ზომები",
+      "sectionTypography": "ტიპოგრაფია",
+      "sectionDecorations": "დეკორაცია",
+      "richEditor": {
+        "title": "დაწერე შენი იმეილი",
+        "placeholder": "დაიწყე წერა..."
+      },
+      "codeEditor": {
+        "title": "MJML კოდი",
+        "previewTitle": "ცოცხალი პრევიუ",
+        "rendering": "პრევიუ იტვირთება...",
+        "renderError": "პრევიუს ჩვენება ვერ მოხერხდა"
+      }
     },
     "templates": {
       "title": "შაბლონები",

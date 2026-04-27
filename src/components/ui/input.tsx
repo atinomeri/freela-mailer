@@ -20,14 +20,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             className={cn(
-              "h-11 w-full rounded-lg border bg-background/80 text-sm",
+              "h-12 w-full rounded-xl border bg-white text-sm font-medium dark:bg-background/80",
               "outline-none transition-all duration-200",
-              "placeholder:text-muted-foreground/70",
-              "focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/30",
+              "placeholder:text-slate-400 dark:placeholder:text-muted-foreground/70",
+              "focus-visible:border-indigo-300 focus-visible:ring-4 focus-visible:ring-indigo-50 dark:focus-visible:border-ring/50 dark:focus-visible:ring-ring/30",
               "disabled:cursor-not-allowed disabled:opacity-60",
               error
                 ? "border-destructive focus-visible:ring-destructive/30"
-                : "border-border/80 hover:border-border",
+                : "border-slate-200 hover:border-slate-300 dark:border-border/80 dark:hover:border-border",
               leftIcon ? "pl-12" : "px-4",
               rightIcon ? "pr-12" : "px-4",
               className
@@ -47,14 +47,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       <input
         ref={ref}
         className={cn(
-          "h-11 w-full rounded-lg border bg-background/80 px-4 text-sm",
+          "h-12 w-full rounded-xl border bg-white px-4 text-sm font-medium dark:bg-background/80",
           "outline-none transition-all duration-200",
-          "placeholder:text-muted-foreground/70",
-          "focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/30",
+          "placeholder:text-slate-400 dark:placeholder:text-muted-foreground/70",
+          "focus-visible:border-indigo-300 focus-visible:ring-4 focus-visible:ring-indigo-50 dark:focus-visible:border-ring/50 dark:focus-visible:ring-ring/30",
           "disabled:cursor-not-allowed disabled:opacity-60",
           error
             ? "border-destructive focus-visible:ring-destructive/30"
-            : "border-border/80 hover:border-border",
+            : "border-slate-200 hover:border-slate-300 dark:border-border/80 dark:hover:border-border",
           className
         )}
         {...props}
@@ -117,4 +117,3 @@ export function PasswordInput({ className, ...props }: InputProps) {
     />
   );
 }
-

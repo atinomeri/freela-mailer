@@ -19,14 +19,14 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       <textarea
         ref={ref}
         className={cn(
-          "min-h-[100px] w-full rounded-lg border bg-background/80 px-4 py-2 text-sm",
+          "min-h-[100px] w-full rounded-xl border bg-white px-4 py-3 text-sm font-medium dark:bg-background/80",
           "outline-none transition-all duration-200",
-          "placeholder:text-muted-foreground/70",
-          "focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/30",
+          "placeholder:text-slate-400 dark:placeholder:text-muted-foreground/70",
+          "focus-visible:border-indigo-300 focus-visible:ring-4 focus-visible:ring-indigo-50 dark:focus-visible:border-ring/50 dark:focus-visible:ring-ring/30",
           "disabled:cursor-not-allowed disabled:opacity-60",
           error
             ? "border-destructive focus-visible:ring-destructive/30"
-            : "border-border/80 hover:border-border",
+            : "border-slate-200 hover:border-slate-300 dark:border-border/80 dark:hover:border-border",
           resizeClasses[resize],
           className
         )}

@@ -20,12 +20,12 @@ interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: "bg-primary/10 text-primary border-primary/20",
-  secondary: "bg-muted/65 text-secondary-foreground border-border/70",
-  success: "bg-success/10 text-success border-success/20",
-  warning: "bg-warning/10 text-warning border-warning/20",
-  destructive: "bg-destructive/10 text-destructive border-destructive/20",
-  outline: "border border-border/70 bg-transparent text-foreground",
+  default: "bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-primary/10 dark:text-primary dark:border-primary/20",
+  secondary: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-muted/65 dark:text-secondary-foreground dark:border-border/70",
+  success: "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-success/10 dark:text-success dark:border-success/20",
+  warning: "bg-amber-50 text-amber-600 border-amber-100 dark:bg-warning/10 dark:text-warning dark:border-warning/20",
+  destructive: "bg-red-50 text-red-600 border-red-100 dark:bg-destructive/10 dark:text-destructive dark:border-destructive/20",
+  outline: "border border-slate-200 bg-transparent text-slate-700 dark:border-border/70 dark:text-foreground",
 };
 
 const sizeClasses = {
@@ -47,7 +47,7 @@ export function Badge({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border font-medium",
+        "inline-flex items-center gap-2 rounded-full border font-bold",
         "transition-colors duration-250",
         variantClasses[variant],
         sizeClasses[size],

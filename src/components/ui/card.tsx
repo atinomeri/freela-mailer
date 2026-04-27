@@ -9,8 +9,8 @@ export function Card({ className, hover = true, clickable = false, ...props }: C
   return (
     <div
       className={cn(
-        "rounded-2xl bg-card text-card-foreground shadow-soft transition-all duration-300 ease-out will-change-transform",
-        hover && "hover:-translate-y-0.5 hover:shadow-soft-lg",
+        "rounded-[32px] border-2 border-slate-100 bg-white text-slate-900 transition-all duration-300 ease-out will-change-transform dark:border-border dark:bg-card dark:text-card-foreground",
+        hover && "hover:-translate-y-1 hover:border-indigo-600 hover:shadow-[0_20px_25px_-5px_rgba(79,70,229,0.10)] dark:hover:border-primary/40",
         clickable && "cursor-pointer card-touch",
         className
       )}
