@@ -307,12 +307,10 @@ function AutoSaveIndicator({ saving, savedAt }: { saving: boolean; savedAt: Date
     );
   }
   if (savedAt) {
-    const seconds = Math.max(1, Math.round((Date.now() - savedAt.getTime()) / 1000));
-    const label = seconds < 30 ? t("savedJustNow") : t("savedAt", { time: savedAt.toLocaleTimeString() });
     return (
       <span className="ml-2 hidden items-center gap-1.5 text-[11.5px] font-medium text-slate-400 dark:text-slate-500 sm:inline-flex">
         <Check className="h-3 w-3 text-emerald-500" />
-        {label}
+        {t("savedAt", { time: savedAt.toLocaleTimeString() })}
       </span>
     );
   }
