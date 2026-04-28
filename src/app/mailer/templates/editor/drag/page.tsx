@@ -9,12 +9,23 @@ import type { EditorRef } from "react-email-editor";
 import { MailerLoginPage } from "../../../login-page";
 import { useMailerAuth } from "@/lib/mailer-auth";
 import { Alert } from "@/components/ui/alert";
-import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
 // Unlayer embeds an iframe that touches `window` at module load — must be
-// client-only.
-const EmailEditor = dynamic(() => import("react-email-editor"), { ssr: false });
+// client-only. Guarded import keeps SSR / non-browser environments safe even
+// if the dynamic() option were ever changed.
+const EmailEditor = dynamic(
+  () => {
+    if (typeof window === "undefined") {
+      return Promise.resolve(() => null) as unknown as Promise<
+        typeof import("react-email-editor").default
+      >;
+    }
+    console.log("[Unlayer] Script Loaded");
+    return import("react-email-editor").then((mod) => mod.default);
+  },
+  { ssr: false },
+);
 
 type ExportHtmlData = { design: unknown; html: string };
 type SaveDesignData = unknown;
@@ -43,13 +54,28 @@ export default function MailerTemplateEditorPage() {
 
   // Sync Unlayer theme with our class-based dark mode (set on <html>).
   useEffect(() => {
-    if (typeof document === "undefined") return;
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+    console.log("[Unlayer] Mounting");
     const root = document.documentElement;
     const observer = new MutationObserver(() => {
       setTheme(root.classList.contains("dark") ? "dark" : "light");
     });
     observer.observe(root, { attributes: true, attributeFilter: ["class"] });
     return () => observer.disconnect();
+  }, []);
+
+  // Surface Unlayer / embed.js script-load failures (CSP, network, etc.) which
+  // otherwise fail silently inside the dynamic component.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function onScriptError(event: ErrorEvent) {
+      const target = event.target as HTMLScriptElement | null;
+      if (target?.src && target.src.includes("unlayer.com")) {
+        console.error("[Unlayer] Script failed to load:", target.src, event.message);
+      }
+    }
+    window.addEventListener("error", onScriptError, true);
+    return () => window.removeEventListener("error", onScriptError, true);
   }, []);
 
   // Re-mounting the editor on theme change is the only reliable way to apply
@@ -134,19 +160,31 @@ export default function MailerTemplateEditorPage() {
   }
 
   function handleEditorReady() {
+    console.log("[Unlayer] Ready");
     const unlayer = editorRef.current?.editor;
-    if (!unlayer) return;
+    if (!unlayer) {
+      console.error("[Unlayer] onReady fired but editorRef.current.editor is null");
+      return;
+    }
     setEditorReady(true);
     // Emit a debounced auto-save indicator on every design change.
     let timer: ReturnType<typeof setTimeout> | null = null;
-    unlayer.addEventListener("design:updated", () => {
-      setAutoSaving(true);
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        setAutoSaving(false);
-        setAutoSavedAt(new Date());
-      }, 800);
-    });
+    try {
+      unlayer.addEventListener("design:updated", () => {
+        setAutoSaving(true);
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          setAutoSaving(false);
+          setAutoSavedAt(new Date());
+        }, 800);
+      });
+    } catch (err) {
+      console.error("[Unlayer] Failed to register design:updated listener:", err);
+    }
+  }
+
+  function handleEditorLoad() {
+    console.log("[Unlayer] onLoad fired (editor instance attaching)");
   }
 
   return (
@@ -217,6 +255,7 @@ export default function MailerTemplateEditorPage() {
             ref={editorRef}
             minHeight="100%"
             onReady={handleEditorReady}
+            onLoad={handleEditorLoad}
             options={unlayerOptions(theme)}
           />
         </div>

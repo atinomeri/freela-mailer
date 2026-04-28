@@ -99,11 +99,12 @@ const nextConfig = {
               "form-action 'self'",
               "frame-ancestors 'none'",
               "object-src 'none'",
-              "img-src 'self' data: blob:",
-              "font-src 'self' data:",
+              "img-src 'self' data: blob: https://*.unlayer.com",
+              "font-src 'self' data: https://fonts.gstatic.com https://*.unlayer.com",
               "style-src 'self' 'unsafe-inline'",
-              "script-src 'self' 'unsafe-inline'",
-              "connect-src 'self' https://*.ingest.sentry.io",
+              "script-src 'self' 'unsafe-inline' https://editor.unlayer.com",
+              "frame-src 'self' https://editor.unlayer.com",
+              "connect-src 'self' https://*.ingest.sentry.io https://*.unlayer.com https://api.unlayer.com https://*.googleapis.com",
               "upgrade-insecure-requests"
             ].join("; ")
           }
