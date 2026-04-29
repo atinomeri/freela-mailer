@@ -11,16 +11,11 @@ import { MailerLoginPage } from "../login-page";
 import { useTranslations } from "next-intl";
 import { ArrowRight } from "lucide-react";
 
-interface SmtpConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  username: string;
+interface MailerSettings {
   fromEmail?: string | null;
   fromName?: string | null;
   trackOpens?: boolean;
   trackClicks?: boolean;
-  hasPassword: boolean;
   source: "env" | "user";
 }
 
@@ -57,10 +52,6 @@ export default function MailerSettingsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [host, setHost] = useState("");
-  const [port, setPort] = useState(465);
-  const [secure, setSecure] = useState(true);
-  const [username, setUsername] = useState("");
   const [fromEmail, setFromEmail] = useState("");
   const [fromName, setFromName] = useState("");
   const [trackOpens, setTrackOpens] = useState(true);
@@ -72,14 +63,10 @@ export default function MailerSettingsPage() {
       setLoading(true);
       setError("");
       try {
-        const res = await apiFetch("/api/desktop/smtp-config");
+        const res = await apiFetch("/api/desktop/mailer-settings");
         if (!res.ok) throw new Error(t("loadFailed"));
-        const body = (await res.json()) as { data: SmtpConfig };
+        const body = (await res.json()) as { data: MailerSettings };
         const data = body.data;
-        setHost(data.host || "");
-        setPort(data.port || 465);
-        setSecure(Boolean(data.secure));
-        setUsername(data.username || "");
         const parsedFrom = parseFromAddress(data.fromEmail || "");
         setFromEmail(parsedFrom.email);
         setFromName(data.fromName || parsedFrom.name || "");
@@ -122,14 +109,10 @@ export default function MailerSettingsPage() {
 
     try {
       const normalizedFrom = parseFromAddress(fromEmail);
-      const res = await apiFetch("/api/desktop/smtp-config", {
+      const res = await apiFetch("/api/desktop/mailer-settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          host,
-          port,
-          secure,
-          username,
           fromEmail: normalizedFrom.email || null,
           fromName: (fromName || normalizedFrom.name || "").trim() || null,
           trackOpens,

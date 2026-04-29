@@ -435,19 +435,13 @@ async function processCampaignSend(job: Job<CampaignSendJobData>): Promise<void>
     //       account, no rotation, no fallback. If it is missing or inactive,
     //       fail the campaign with a clear log line.
     //   (b) Pool — campaign.sendingAccountId is null: rotate through the
-    //       user's active pool, falling back to the single user SMTP config
-    //       or the SMTP_* env. (Pre-existing behaviour kept for backward
-    //       compatibility.)
-    const userSmtp = await prisma.desktopSmtpConfig.findUnique({
+    //       user's active pool, falling back to the SMTP_* env if the pool
+    //       is empty. (Pre-existing behaviour kept for backward compat.
+    //       Note: legacy DesktopSmtpConfig is no longer read here — mailer
+    //       defaults moved to DesktopMailerSettings.)
+    const mailerSettings = await prisma.desktopMailerSettings.findUnique({
       where: { desktopUserId },
       select: {
-        host: true,
-        port: true,
-        secure: true,
-        username: true,
-        passwordEnc: true,
-        fromEmail: true,
-        fromName: true,
         trackOpens: true,
         trackClicks: true,
       },
@@ -547,32 +541,28 @@ async function processCampaignSend(job: Job<CampaignSendJobData>): Promise<void>
           : null,
       }));
 
-      const fallbackPort = userSmtp?.port || parseInt(process.env.SMTP_PORT || "465", 10);
-      const fallbackSecure = userSmtp?.secure ?? fallbackPort === 465;
+      const fallbackPort = parseInt(process.env.SMTP_PORT || "465", 10);
+      const fallbackSecure =
+        (process.env.SMTP_SECURE || "").toLowerCase() === "true" ||
+        fallbackPort === 465;
       const fallbackAccount: SmtpResolvedAccount | null =
-        (userSmtp?.host || process.env.SMTP_HOST) &&
-        (userSmtp?.username || process.env.SMTP_USER) &&
-        (userSmtp?.passwordEnc || process.env.SMTP_PASS)
+        process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
           ? {
               id: "single",
-              host: userSmtp?.host || process.env.SMTP_HOST || "",
+              host: process.env.SMTP_HOST,
               port: fallbackPort,
               secure: fallbackSecure,
-              username: userSmtp?.username || process.env.SMTP_USER || "",
-              password: userSmtp
-                ? decryptSecretValue(userSmtp.passwordEnc)
-                : process.env.SMTP_PASS || "",
+              username: process.env.SMTP_USER,
+              password: process.env.SMTP_PASS,
               senderKey: (
-                userSmtp?.fromEmail ||
                 process.env.SMTP_FROM ||
-                userSmtp?.username ||
                 process.env.SMTP_USER ||
                 ""
               )
                 .trim()
                 .toLowerCase(),
-              fromEmail: userSmtp?.fromEmail || process.env.SMTP_FROM || null,
-              fromName: userSmtp?.fromName || null,
+              fromEmail: process.env.SMTP_FROM || null,
+              fromName: null,
             }
           : null;
 
@@ -637,13 +627,13 @@ async function processCampaignSend(job: Job<CampaignSendJobData>): Promise<void>
       }
     }
 
-    // Tracking config
-    const trackOpens = userSmtp?.trackOpens ?? process.env.TRACK_OPENS === "true";
+    // Tracking config (per-user defaults from DesktopMailerSettings, env fallback)
+    const trackOpens = mailerSettings?.trackOpens ?? process.env.TRACK_OPENS === "true";
     const trackingUrl = resolveTrackingUrl(
       process.env.TRACKING_PIXEL_URL,
       "/api/tracking/pixel",
     );
-    const trackClicks = userSmtp?.trackClicks ?? process.env.TRACK_CLICKS === "true";
+    const trackClicks = mailerSettings?.trackClicks ?? process.env.TRACK_CLICKS === "true";
     const clickTrackingUrl = resolveTrackingUrl(
       process.env.CLICK_TRACKING_URL,
       "/api/tracking/click",

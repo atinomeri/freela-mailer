@@ -473,6 +473,16 @@ export const upsertDesktopSmtpConfigSchema = z.object({
   trackClicks: z.boolean().optional(),
 });
 
+// Per-user mailer metadata: default sender identity + tracking flags.
+// No SMTP credentials — those live on DesktopSmtpPoolAccount and are picked
+// per campaign via Campaign.sendingAccountId.
+export const upsertDesktopMailerSettingsSchema = z.object({
+  fromEmail: z.string().email("Invalid from email").nullable().optional(),
+  fromName: z.string().max(200).nullable().optional(),
+  trackOpens: z.boolean().optional(),
+  trackClicks: z.boolean().optional(),
+});
+
 export const createDesktopSmtpPoolAccountSchema = z.object({
   host: z.string().min(1, "SMTP host is required").max(255),
   port: z.coerce.number().int().min(1).max(65535).default(465),

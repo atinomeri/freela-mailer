@@ -1,19 +1,12 @@
-// DEPRECATED: legacy global SMTP config endpoint.
-//
-// Mailer metadata (default sender + tracking flags) has moved to
-// DesktopMailerSettings, exposed at /api/desktop/mailer-settings.
-// Per-campaign SMTP credentials live on DesktopSmtpPoolAccount, exposed at
-// /api/desktop/smtp-pool. The campaign worker no longer reads from
-// DesktopSmtpConfig — only env fallback (SMTP_HOST/SMTP_USER/SMTP_PASS) remains.
-//
-// This route is kept for one release so legacy desktop clients that still
-// PATCH this URL keep working. Schedule for removal after the next release.
+// Per-user mailer settings: default sender identity + tracking preferences.
+// Decoupled from SMTP credentials — those live on DesktopSmtpPoolAccount and
+// are picked per campaign via Campaign.sendingAccountId. See
+// prisma/migrations/20260429140000_mailer_settings_split for the data move.
 
 import { prisma } from "@/lib/prisma";
 import { requireDesktopAuth } from "@/lib/desktop-auth";
 import { errors, success } from "@/lib/api-response";
-import { upsertDesktopSmtpConfigSchema } from "@/lib/validation";
-import { encryptSecretValue } from "@/lib/secret-crypto";
+import { upsertDesktopMailerSettingsSchema } from "@/lib/validation";
 
 function parseFromAddress(raw: string | null | undefined): {
   email: string | null;
@@ -27,10 +20,7 @@ function parseFromAddress(raw: string | null | undefined): {
     const maybeEmail = angleMatch[2]?.trim() || "";
     const maybeName = angleMatch[1]?.trim() || "";
     if (maybeEmail.includes("@")) {
-      return {
-        email: maybeEmail,
-        name: maybeName || null,
-      };
+      return { email: maybeEmail, name: maybeName || null };
     }
   }
 
@@ -41,7 +31,7 @@ function parseFromAddress(raw: string | null | undefined): {
   return { email: null, name: value };
 }
 
-function normalizeSmtpBody(body: unknown): unknown {
+function normalizeBody(body: unknown): unknown {
   if (!body || typeof body !== "object" || Array.isArray(body)) return body;
   const next = { ...(body as Record<string, unknown>) };
   const rawFromEmail = typeof next.fromEmail === "string" ? next.fromEmail : null;
@@ -61,19 +51,12 @@ function normalizeSmtpBody(body: unknown): unknown {
 }
 
 function envDefaults() {
-  const port = parseInt(process.env.SMTP_PORT || "465", 10);
-  const secure =
-    (process.env.SMTP_SECURE || "").toLowerCase() === "true" || port === 465;
   const parsedDefaultFrom = parseFromAddress(
     process.env.SMTP_FROM || process.env.SMTP_USER || "",
   );
   return {
-    host: process.env.SMTP_HOST || "",
-    port,
-    secure,
-    username: process.env.SMTP_USER || "",
-    fromEmail: parsedDefaultFrom.email || process.env.SMTP_USER || "",
-    fromName: parsedDefaultFrom.name || "",
+    fromEmail: parsedDefaultFrom.email || null,
+    fromName: parsedDefaultFrom.name || null,
     trackOpens: process.env.TRACK_OPENS === "true",
     trackClicks: process.env.TRACK_CLICKS === "true",
   };
@@ -84,14 +67,10 @@ export async function GET(req: Request) {
     const auth = await requireDesktopAuth(req);
     if (auth.error) return auth.error;
 
-    const config = await prisma.desktopSmtpConfig.findUnique({
+    const settings = await prisma.desktopMailerSettings.findUnique({
       where: { desktopUserId: auth.user.id },
       select: {
         id: true,
-        host: true,
-        port: true,
-        secure: true,
-        username: true,
         fromEmail: true,
         fromName: true,
         trackOpens: true,
@@ -100,21 +79,16 @@ export async function GET(req: Request) {
       },
     });
 
-    if (!config) {
+    if (!settings) {
       return success({
         ...envDefaults(),
-        hasPassword: Boolean(process.env.SMTP_PASS),
-        source: "env",
+        source: "env" as const,
       });
     }
 
-    return success({
-      ...config,
-      hasPassword: true,
-      source: "user",
-    });
+    return success({ ...settings, source: "user" as const });
   } catch (err) {
-    console.error("[SMTP Config Get] Error:", err);
+    console.error("[Mailer Settings Get] Error:", err);
     return errors.serverError();
   }
 }
@@ -127,45 +101,21 @@ export async function PATCH(req: Request) {
     const body = await req.json().catch(() => null);
     if (!body) return errors.badRequest("Invalid JSON body");
 
-    const normalizedBody = normalizeSmtpBody(body);
-    const parsed = upsertDesktopSmtpConfigSchema.safeParse(normalizedBody);
+    const parsed = upsertDesktopMailerSettingsSchema.safeParse(normalizeBody(body));
     if (!parsed.success) return errors.validationError(parsed.error.issues);
 
     const data = parsed.data;
 
-    const existing = await prisma.desktopSmtpConfig.findUnique({
-      where: { desktopUserId: auth.user.id },
-      select: { id: true, passwordEnc: true },
-    });
-
-    const passwordEnc = data.password
-      ? encryptSecretValue(data.password)
-      : existing?.passwordEnc;
-
-    if (!passwordEnc) {
-      return errors.badRequest("SMTP password is required for initial setup");
-    }
-
-    const updated = await prisma.desktopSmtpConfig.upsert({
+    const updated = await prisma.desktopMailerSettings.upsert({
       where: { desktopUserId: auth.user.id },
       create: {
         desktopUserId: auth.user.id,
-        host: data.host,
-        port: data.port,
-        secure: data.secure ?? data.port === 465,
-        username: data.username,
-        passwordEnc,
         fromEmail: data.fromEmail ?? null,
         fromName: data.fromName ?? null,
         trackOpens: data.trackOpens ?? true,
         trackClicks: data.trackClicks ?? true,
       },
       update: {
-        host: data.host,
-        port: data.port,
-        secure: data.secure ?? data.port === 465,
-        username: data.username,
-        passwordEnc,
         fromEmail: data.fromEmail ?? null,
         fromName: data.fromName ?? null,
         trackOpens: data.trackOpens ?? true,
@@ -173,10 +123,6 @@ export async function PATCH(req: Request) {
       },
       select: {
         id: true,
-        host: true,
-        port: true,
-        secure: true,
-        username: true,
         fromEmail: true,
         fromName: true,
         trackOpens: true,
@@ -185,9 +131,9 @@ export async function PATCH(req: Request) {
       },
     });
 
-    return success({ ...updated, hasPassword: true, source: "user" });
+    return success({ ...updated, source: "user" as const });
   } catch (err) {
-    console.error("[SMTP Config Update] Error:", err);
+    console.error("[Mailer Settings Update] Error:", err);
     return errors.serverError();
   }
 }

@@ -149,6 +149,7 @@ model DesktopUser {
   contactLists      ContactList[]
   unsubscribedEmails UnsubscribedEmail[]
   smtpConfig        DesktopSmtpConfig?
+  mailerSettings    DesktopMailerSettings?
   smtpPoolAccounts  DesktopSmtpPoolAccount[]
   sendingAccounts   DesktopSendingAccount[]
   campaignTemplates CampaignTemplate[]
@@ -172,6 +173,12 @@ model DesktopRefreshToken {
   @@index([expiresAt])
 }
 
+// DEPRECATED: this table once held both global SMTP credentials AND mailer
+// metadata (default sender + tracking flags). With per-campaign sending
+// accounts (see Campaign.sendingAccountId + DesktopSmtpPoolAccount) the
+// credential half is no longer used; the metadata half has moved to
+// DesktopMailerSettings. The table is kept for one release so a follow-up
+// migration can drop it after we confirm nothing else reads from it.
 model DesktopSmtpConfig {
   id            String      @id @default(cuid())
   desktopUserId String      @unique
@@ -182,6 +189,23 @@ model DesktopSmtpConfig {
   secure        Boolean     @default(true)
   username      String
   passwordEnc   String
+  fromEmail     String?
+  fromName      String?
+  trackOpens    Boolean     @default(true)
+  trackClicks   Boolean     @default(true)
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+// Per-user mailer metadata: default From identity + tracking preferences.
+// Decoupled from any SMTP credentials — credentials live in
+// DesktopSmtpPoolAccount (selected per campaign).
+model DesktopMailerSettings {
+  id            String      @id @default(cuid())
+  desktopUserId String      @unique
+  desktopUser   DesktopUser @relation(fields: [desktopUserId], references: [id], onDelete: Cascade)
+
   fromEmail     String?
   fromName      String?
   trackOpens    Boolean     @default(true)
