@@ -21,6 +21,7 @@ import {
 import { useState } from "react";
 import { PageSpinner } from "@/components/ui/spinner";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { LanguageSwitch } from "@/components/ui/language-switch";
 
 const NAV_ITEMS = [
   { href: "/", key: "nav.dashboard", icon: LayoutDashboard, adminOnly: false },
@@ -138,6 +139,9 @@ export function MailerShell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-muted-foreground">{t("brand")}</div>
           </div>
+          <div className="mb-3 flex justify-center">
+            <LanguageSwitch />
+          </div>
           <button
             onClick={logout}
             className="flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-[13px] font-bold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-foreground"
@@ -162,7 +166,10 @@ export function MailerShell({ children }: { children: React.ReactNode }) {
             </button>
             <span className="text-[15px] font-bold tracking-normal">{t("brand")}</span>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <LanguageSwitch />
+            <ThemeToggle />
+          </div>
         </header>
 
         <main className="flex-1 overflow-auto px-4 py-8 sm:px-6 lg:px-8 lg:py-10">{children}</main>

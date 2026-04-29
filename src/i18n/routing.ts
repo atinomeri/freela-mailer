@@ -1,7 +1,7 @@
 import { defineRouting } from "next-intl/routing";
 
 export const routing = defineRouting({
-  locales: ["ka", "en"],
+  locales: ["ka", "en", "ru"],
   defaultLocale: "ka",
   // Keep locale in cookie (no /en prefix) to avoid restructuring App Router with /[locale].
   localePrefix: "never",

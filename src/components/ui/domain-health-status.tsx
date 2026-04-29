@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ShieldCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useMailerAuth } from "@/lib/mailer-auth";
 
@@ -17,10 +18,12 @@ interface DomainHealthResponse {
   checks?: DeliverabilityCheck[];
 }
 
+type Status = "loading" | "healthy" | "warning" | "failed";
+
 export function DomainHealthStatus({ className }: { className?: string }) {
   const { apiFetch } = useMailerAuth();
-  const [status, setStatus] = useState<"loading" | "healthy" | "warning" | "failed">("loading");
-  const [label, setLabel] = useState("checking");
+  const t = useTranslations("mailer.domainHealth");
+  const [status, setStatus] = useState<Status>("loading");
 
   useEffect(() => {
     let mounted = true;
@@ -31,7 +34,6 @@ export function DomainHealthStatus({ className }: { className?: string }) {
         if (!mounted) return;
         if (!res.ok) {
           setStatus("failed");
-          setLabel("SPF/DKIM failed");
           return;
         }
 
@@ -42,18 +44,14 @@ export function DomainHealthStatus({ className }: { className?: string }) {
 
         if (spf === "pass" && dkim === "pass") {
           setStatus("healthy");
-          setLabel("SPF/DKIM pass");
         } else if (spf === "fail" || dkim === "fail") {
           setStatus("failed");
-          setLabel("SPF/DKIM failed");
         } else {
           setStatus("warning");
-          setLabel("SPF/DKIM review");
         }
       } catch {
         if (!mounted) return;
         setStatus("failed");
-        setLabel("SPF/DKIM failed");
       }
     }
 
@@ -64,6 +62,15 @@ export function DomainHealthStatus({ className }: { className?: string }) {
       clearInterval(interval);
     };
   }, [apiFetch]);
+
+  const label =
+    status === "healthy"
+      ? t("healthy")
+      : status === "warning"
+        ? t("warning")
+        : status === "failed"
+          ? t("failed")
+          : t("checking");
 
   const tone = useMemo(() => {
     if (status === "healthy") return "text-emerald-600 bg-emerald-500";
@@ -78,7 +85,7 @@ export function DomainHealthStatus({ className }: { className?: string }) {
         "flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11.5px] font-bold shadow-sm dark:border-border dark:bg-card",
         className,
       )}
-      title="Domain Health: mailer.freela.ge via src/lib/mailer-preflight.ts"
+      title={t("tooltip")}
     >
       <ShieldCheck className={cn("h-3.5 w-3.5", tone.split(" ")[0])} strokeWidth={2.4} />
       <span className="relative flex h-2.5 w-2.5">
@@ -88,7 +95,7 @@ export function DomainHealthStatus({ className }: { className?: string }) {
         <span className={cn("relative inline-flex h-2.5 w-2.5 rounded-full", tone.split(" ")[1])} />
       </span>
       <span className="uppercase tracking-widest text-slate-500 dark:text-muted-foreground">
-        Domain: <span className={tone.split(" ")[0]}>{label}</span>
+        {t("label")}: <span className={tone.split(" ")[0]}>{label}</span>
       </span>
     </div>
   );

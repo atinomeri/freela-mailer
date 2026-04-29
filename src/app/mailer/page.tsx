@@ -86,14 +86,25 @@ function formatPercent(numerator: number, denominator: number): string {
   return `${Math.round((numerator / denominator) * 100)}%`;
 }
 
-function formatQueueState(state: string | null | undefined, available: boolean): string {
-  if (!available) return "Queue unavailable";
-  if (!state) return "No active BullMQ job";
-  if (state === "active") return "Sending now";
-  if (state === "waiting" || state === "delayed") return "Waiting in queue";
-  if (state === "completed") return "Completed";
-  if (state === "failed") return "Failed";
-  return state;
+type QueueStateKey =
+  | "unavailable"
+  | "idle"
+  | "active"
+  | "waiting"
+  | "completed"
+  | "failed";
+
+function resolveQueueStateKey(
+  state: string | null | undefined,
+  available: boolean,
+): QueueStateKey | null {
+  if (!available) return "unavailable";
+  if (!state) return "idle";
+  if (state === "active") return "active";
+  if (state === "waiting" || state === "delayed") return "waiting";
+  if (state === "completed") return "completed";
+  if (state === "failed") return "failed";
+  return null;
 }
 
 export default function MailerDashboard() {
@@ -167,29 +178,36 @@ export default function MailerDashboard() {
   }> = [
     {
       key: "sent",
-      label: "Total Sent",
+      label: t("dashboard.metrics.totalSent"),
       value: loading ? "—" : formatNumber(totalSent),
-      description: campaign ? "Sent from the current campaign" : "No campaign selected",
+      description: campaign
+        ? t("dashboard.metrics.totalSentWithCampaign")
+        : t("dashboard.metrics.totalSentNoCampaign"),
       icon: <Send className="h-4 w-4" strokeWidth={2.2} />,
       tone: "primary",
     },
     {
       key: "openRate",
-      label: "Open Rate",
+      label: t("dashboard.metrics.openRate"),
       value: loading ? "—" : openRate,
-      description: "Current campaign engagement",
+      description: t("dashboard.metrics.openRateDescription"),
       icon: <MailOpen className="h-4 w-4" strokeWidth={2.2} />,
       tone: "success",
     },
     {
       key: "clickRate",
-      label: "Click Rate",
+      label: t("dashboard.metrics.clickRate"),
       value: loading ? "—" : clickRate,
-      description: "Current campaign link clicks",
+      description: t("dashboard.metrics.clickRateDescription"),
       icon: <MousePointerClick className="h-4 w-4" strokeWidth={2.2} />,
       tone: "accent",
     },
   ];
+
+  const queueStateKey = resolveQueueStateKey(queue?.state, queue?.available ?? false);
+  const queueStateLabel = queueStateKey
+    ? t(`dashboard.queueMonitor.states.${queueStateKey}`)
+    : queue?.state || "";
 
   if (!user) return <MailerLoginPage />;
 
@@ -197,8 +215,8 @@ export default function MailerDashboard() {
     <div className="mx-auto max-w-6xl space-y-10">
       <PageHeader
         eyebrow={t("dashboard.workspaceLabel")}
-        title="Mission Control"
-        description="Active campaign delivery, queue progress, and sender health in one focused view."
+        title={t("dashboard.missionControl.title")}
+        description={t("dashboard.missionControl.description")}
         actions={
           <div className="flex flex-wrap items-center gap-4">
             <WorkerStatus />
@@ -231,7 +249,7 @@ export default function MailerDashboard() {
           <EmptyState
             icon={<Mail strokeWidth={1.8} />}
             title={t("dashboard.emptyState.title")}
-            description="Mission Control will show the last or currently active campaign once one exists."
+            description={t("dashboard.missionControl.emptyDescription")}
             action={{
               label: t("dashboard.emptyState.action"),
               href: "/campaigns/new",
@@ -240,8 +258,8 @@ export default function MailerDashboard() {
         </SectionCard>
       ) : (
         <SectionCard
-          title={campaign?.name ?? "Loading campaign"}
-          description="Current operational campaign snapshot"
+          title={campaign?.name ?? t("dashboard.missionControl.loadingCampaign")}
+          description={t("dashboard.missionControl.description")}
           actions={
             campaign ? (
               <div className="flex flex-wrap items-center gap-2">
@@ -286,53 +304,72 @@ export default function MailerDashboard() {
                   <div>
                     <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-indigo-600 dark:text-primary">
                       <Activity className="h-3.5 w-3.5" strokeWidth={2.4} />
-                      BullMQ Queue Monitor
+                      {t("dashboard.queueMonitor.eyebrow")}
                     </div>
                     <h3 className="mt-2 text-xl font-bold text-slate-950 dark:text-foreground">
-                      {formatQueueState(queue?.state, queue?.available ?? false)}
+                      {queueStateLabel}
                     </h3>
                   </div>
                   <div className="text-right text-sm font-bold tabular-nums text-slate-500 dark:text-muted-foreground">
-                    {formatNumber(queueSent)} / {formatNumber(queueTotal)} sent
+                    {t("dashboard.queueMonitor.sentOf", {
+                      sent: formatNumber(queueSent),
+                      total: formatNumber(queueTotal),
+                    })}
                   </div>
                 </div>
                 <Progress value={queueProgress} className="mt-6" size="lg" />
                 <div className="mt-4 flex flex-wrap items-center gap-4 text-[12.5px] font-medium text-slate-500 dark:text-muted-foreground">
-                  <span>Progress: {queueProgress}%</span>
-                  <span>Sent: {formatNumber(queue?.sent ?? campaign?.sentCount ?? 0)}</span>
-                  <span>Failed: {formatNumber(queue?.failed ?? campaign?.failedCount ?? 0)}</span>
+                  <span>{t("dashboard.queueMonitor.progress", { value: queueProgress })}</span>
+                  <span>
+                    {t("dashboard.queueMonitor.sent", {
+                      value: formatNumber(queue?.sent ?? campaign?.sentCount ?? 0),
+                    })}
+                  </span>
+                  <span>
+                    {t("dashboard.queueMonitor.failed", {
+                      value: formatNumber(queue?.failed ?? campaign?.failedCount ?? 0),
+                    })}
+                  </span>
                 </div>
               </div>
             </div>
 
             <aside className="rounded-[32px] border-2 border-slate-100 bg-white p-8 dark:border-border dark:bg-card">
               <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-indigo-600 dark:text-primary">
-                Current Task
+                {t("dashboard.currentTask.eyebrow")}
               </div>
               <h3 className="mt-2 text-xl font-bold text-slate-950 dark:text-foreground">
-                {campaign?.name ?? "Loading"}
+                {campaign?.name ?? t("dashboard.missionControl.loadingCampaign")}
               </h3>
               <dl className="mt-6 space-y-4 text-sm">
                 <div className="flex items-center justify-between gap-4 border-b border-slate-50 pb-4 dark:border-border/60">
-                  <dt className="font-medium text-slate-500 dark:text-muted-foreground">Recipients</dt>
+                  <dt className="font-medium text-slate-500 dark:text-muted-foreground">
+                    {t("dashboard.currentTask.recipients")}
+                  </dt>
                   <dd className="font-bold tabular-nums text-slate-950 dark:text-foreground">
                     {formatNumber(campaign?.totalCount ?? 0)}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-4 border-b border-slate-50 pb-4 dark:border-border/60">
-                  <dt className="font-medium text-slate-500 dark:text-muted-foreground">Opened</dt>
+                  <dt className="font-medium text-slate-500 dark:text-muted-foreground">
+                    {t("dashboard.currentTask.opened")}
+                  </dt>
                   <dd className="font-bold tabular-nums text-slate-950 dark:text-foreground">
                     {formatNumber(campaign?.openCount ?? 0)}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-4 border-b border-slate-50 pb-4 dark:border-border/60">
-                  <dt className="font-medium text-slate-500 dark:text-muted-foreground">Clicked</dt>
+                  <dt className="font-medium text-slate-500 dark:text-muted-foreground">
+                    {t("dashboard.currentTask.clicked")}
+                  </dt>
                   <dd className="font-bold tabular-nums text-slate-950 dark:text-foreground">
                     {formatNumber(campaign?.clickCount ?? 0)}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="font-medium text-slate-500 dark:text-muted-foreground">Bounced</dt>
+                  <dt className="font-medium text-slate-500 dark:text-muted-foreground">
+                    {t("dashboard.currentTask.bounced")}
+                  </dt>
                   <dd className="font-bold tabular-nums text-slate-950 dark:text-foreground">
                     {formatNumber(campaign?.bounceCount ?? 0)}
                   </dd>

@@ -139,7 +139,44 @@
         "action": "კონტაქტების მართვა"
       },
       "emptyCampaigns": "შექმენი პირველი კამპანია",
-      "emptyContacts": "დასაწყებად კონტაქტები დაამატე"
+      "emptyContacts": "დასაწყებად კონტაქტები დაამატე",
+      "missionControl": {
+        "title": "მართვის პანელი",
+        "description": "აქტიური კამპანიის მიწოდება, რიგის პროგრესი და გამგზავნის მდგომარეობა ერთ ფოკუსირებულ ხედში.",
+        "emptyDescription": "მართვის პანელი გაჩვენებთ ბოლო ან მიმდინარე აქტიურ კამპანიას, როგორც კი ის გამოჩნდება.",
+        "loadingCampaign": "კამპანიის ჩატვირთვა"
+      },
+      "metrics": {
+        "totalSent": "სულ გაგზავნილია",
+        "totalSentWithCampaign": "გაგზავნილია მიმდინარე კამპანიიდან",
+        "totalSentNoCampaign": "კამპანია არ არის არჩეული",
+        "openRate": "გახსნის მაჩვენებელი",
+        "openRateDescription": "მიმდინარე კამპანიის ჩართულობა",
+        "clickRate": "კლიკის მაჩვენებელი",
+        "clickRateDescription": "ბმულზე გადასვლები მიმდინარე კამპანიაში"
+      },
+      "queueMonitor": {
+        "eyebrow": "გაგზავნის რიგი",
+        "sentOf": "{sent} / {total} გაგზავნილია",
+        "progress": "პროგრესი: {value}%",
+        "sent": "გაგზავნილი: {value}",
+        "failed": "ჩავარდნილი: {value}",
+        "states": {
+          "unavailable": "რიგი მიუწვდომელია",
+          "idle": "აქტიური სამუშაო არ არის",
+          "active": "ახლა იგზავნება",
+          "waiting": "რიგში დგას",
+          "completed": "დასრულებულია",
+          "failed": "ჩავარდა"
+        }
+      },
+      "currentTask": {
+        "eyebrow": "მიმდინარე ამოცანა",
+        "recipients": "მიმღებები",
+        "opened": "გახსნილი",
+        "clicked": "დაკლიკებული",
+        "bounced": "დაბრუნებული"
+      }
     },
     "settingsPage": {
       "title": "პარამეტრები",
@@ -541,6 +578,27 @@
       "noDescription": "აღწერა არ არის",
       "balanceLine": "ბალანსი: {before} -> {after}",
       "paymentAmount": "თანხა: {amount} {currency}"
+    },
+    "workerStatus": {
+      "label": "ვორკერი",
+      "online": "ჩართულია",
+      "offline": "გამორთულია",
+      "checking": "მოწმდება",
+      "tooltip": "ვორკერის მდგომარეობა"
+    },
+    "domainHealth": {
+      "label": "დომენი",
+      "checking": "მოწმდება",
+      "healthy": "SPF/DKIM ვალიდურია",
+      "warning": "SPF/DKIM გადასამოწმებელია",
+      "failed": "SPF/DKIM ვერ მოწმდება",
+      "tooltip": "დომენის მდგომარეობა"
+    },
+    "languageSwitch": {
+      "label": "ენა",
+      "ka": "KA",
+      "en": "EN",
+      "ru": "RU"
     }
   }
 }

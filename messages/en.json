@@ -139,7 +139,44 @@
         "action": "Manage contacts"
       },
       "emptyCampaigns": "Create your first campaign",
-      "emptyContacts": "Import your contacts to get started"
+      "emptyContacts": "Import your contacts to get started",
+      "missionControl": {
+        "title": "Mission Control",
+        "description": "Active campaign delivery, queue progress, and sender health in one focused view.",
+        "emptyDescription": "Mission Control will show the last or currently active campaign once one exists.",
+        "loadingCampaign": "Loading campaign"
+      },
+      "metrics": {
+        "totalSent": "Total Sent",
+        "totalSentWithCampaign": "Sent from the current campaign",
+        "totalSentNoCampaign": "No campaign selected",
+        "openRate": "Open Rate",
+        "openRateDescription": "Current campaign engagement",
+        "clickRate": "Click Rate",
+        "clickRateDescription": "Current campaign link clicks"
+      },
+      "queueMonitor": {
+        "eyebrow": "Sending Queue",
+        "sentOf": "{sent} / {total} sent",
+        "progress": "Progress: {value}%",
+        "sent": "Sent: {value}",
+        "failed": "Failed: {value}",
+        "states": {
+          "unavailable": "Queue unavailable",
+          "idle": "No active job",
+          "active": "Sending now",
+          "waiting": "Waiting in queue",
+          "completed": "Completed",
+          "failed": "Failed"
+        }
+      },
+      "currentTask": {
+        "eyebrow": "Current Task",
+        "recipients": "Recipients",
+        "opened": "Opened",
+        "clicked": "Clicked",
+        "bounced": "Bounced"
+      }
     },
     "settingsPage": {
       "title": "Settings",
@@ -541,6 +578,27 @@
       "noDescription": "No description",
       "balanceLine": "Balance: {before} -> {after}",
       "paymentAmount": "Amount: {amount} {currency}"
+    },
+    "workerStatus": {
+      "label": "Worker",
+      "online": "Online",
+      "offline": "Offline",
+      "checking": "Checking",
+      "tooltip": "Worker health"
+    },
+    "domainHealth": {
+      "label": "Domain",
+      "checking": "Checking",
+      "healthy": "SPF/DKIM pass",
+      "warning": "SPF/DKIM review",
+      "failed": "SPF/DKIM failed",
+      "tooltip": "Domain health"
+    },
+    "languageSwitch": {
+      "label": "Language",
+      "ka": "KA",
+      "en": "EN",
+      "ru": "RU"
     }
   }
 }

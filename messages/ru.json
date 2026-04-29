@@ -139,7 +139,44 @@
         "action": "Управлять контактами"
       },
       "emptyCampaigns": "Создайте первую кампанию",
-      "emptyContacts": "Импортируйте контакты, чтобы начать"
+      "emptyContacts": "Импортируйте контакты, чтобы начать",
+      "missionControl": {
+        "title": "Панель управления",
+        "description": "Доставка активной кампании, прогресс очереди и состояние отправителя в одном экране.",
+        "emptyDescription": "Панель управления покажет последнюю или текущую активную кампанию, как только она появится.",
+        "loadingCampaign": "Загрузка кампании"
+      },
+      "metrics": {
+        "totalSent": "Всего отправлено",
+        "totalSentWithCampaign": "Отправлено из текущей кампании",
+        "totalSentNoCampaign": "Кампания не выбрана",
+        "openRate": "Процент открытий",
+        "openRateDescription": "Вовлечённость текущей кампании",
+        "clickRate": "Процент кликов",
+        "clickRateDescription": "Переходы по ссылкам в текущей кампании"
+      },
+      "queueMonitor": {
+        "eyebrow": "Очередь отправки",
+        "sentOf": "{sent} / {total} отправлено",
+        "progress": "Прогресс: {value}%",
+        "sent": "Отправлено: {value}",
+        "failed": "Не удалось: {value}",
+        "states": {
+          "unavailable": "Очередь недоступна",
+          "idle": "Нет активной задачи",
+          "active": "Идёт отправка",
+          "waiting": "Ожидает в очереди",
+          "completed": "Завершено",
+          "failed": "Сбой"
+        }
+      },
+      "currentTask": {
+        "eyebrow": "Текущая задача",
+        "recipients": "Получатели",
+        "opened": "Открыли",
+        "clicked": "Кликнули",
+        "bounced": "Отказы"
+      }
     },
     "settingsPage": {
       "title": "Настройки",
@@ -541,6 +578,27 @@
       "noDescription": "Без описания",
       "balanceLine": "Баланс: {before} -> {after}",
       "paymentAmount": "Сумма: {amount} {currency}"
+    },
+    "workerStatus": {
+      "label": "Воркер",
+      "online": "Активен",
+      "offline": "Неактивен",
+      "checking": "Проверка",
+      "tooltip": "Состояние воркера"
+    },
+    "domainHealth": {
+      "label": "Домен",
+      "checking": "Проверка",
+      "healthy": "SPF/DKIM в порядке",
+      "warning": "SPF/DKIM требует проверки",
+      "failed": "SPF/DKIM не пройден",
+      "tooltip": "Состояние домена"
+    },
+    "languageSwitch": {
+      "label": "Язык",
+      "ka": "KA",
+      "en": "EN",
+      "ru": "RU"
     }
   }
 }
