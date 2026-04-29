@@ -325,6 +325,20 @@ async function processCampaignSend(job: Job<CampaignSendJobData>): Promise<void>
       },
     });
 
+    // Helper: mark campaign FAILED with a user-visible error and bail.
+    const failCampaignWith = async (message: string) => {
+      console.error(`[Worker] Campaign ${campaignId} failing: ${message}`);
+      await prisma.campaign
+        .update({
+          where: { id: campaignId },
+          data: {
+            status: "FAILED",
+            completedAt: new Date(),
+          },
+        })
+        .catch(() => {});
+    };
+
     if (!campaign) throw new Error(`Campaign ${campaignId} not found`);
     if (campaign.desktopUserId !== desktopUserId) throw new Error("Ownership mismatch");
     if (campaign.status !== "QUEUED") throw new Error(`Campaign status is ${campaign.status}, expected QUEUED`);
@@ -414,7 +428,16 @@ async function processCampaignSend(job: Job<CampaignSendJobData>): Promise<void>
       },
     });
 
-    // 4. Resolve SMTP config (pool -> user config -> env fallback)
+    // 4. Resolve SMTP config
+    //
+    // Two modes:
+    //   (a) Focused — campaign.sendingAccountId is set: use ONLY that pool
+    //       account, no rotation, no fallback. If it is missing or inactive,
+    //       fail the campaign with a clear log line.
+    //   (b) Pool — campaign.sendingAccountId is null: rotate through the
+    //       user's active pool, falling back to the single user SMTP config
+    //       or the SMTP_* env. (Pre-existing behaviour kept for backward
+    //       compatibility.)
     const userSmtp = await prisma.desktopSmtpConfig.findUnique({
       where: { desktopUserId },
       select: {
@@ -429,79 +452,137 @@ async function processCampaignSend(job: Job<CampaignSendJobData>): Promise<void>
         trackClicks: true,
       },
     });
-    const smtpPoolAccounts = await prisma.desktopSmtpPoolAccount.findMany({
-      where: { desktopUserId, active: true },
-      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
-      select: {
-        id: true,
-        host: true,
-        port: true,
-        secure: true,
-        username: true,
-        passwordEnc: true,
-        fromEmail: true,
-        fromName: true,
-        proxyType: true,
-        proxyHost: true,
-        proxyPort: true,
-        proxyUsername: true,
-        proxyPasswordEnc: true,
-      },
-    });
 
-    const resolvedPool: SmtpResolvedAccount[] = smtpPoolAccounts.map((item) => ({
-      id: item.id,
-      host: item.host,
-      port: item.port,
-      secure: item.secure,
-      username: item.username,
-      password: decryptSecretValue(item.passwordEnc),
-      senderKey: (item.fromEmail || item.username).trim().toLowerCase(),
-      fromEmail: item.fromEmail,
-      fromName: item.fromName,
-      proxyType: item.proxyType,
-      proxyHost: item.proxyHost,
-      proxyPort: item.proxyPort,
-      proxyUsername: item.proxyUsername,
-      proxyPassword: item.proxyPasswordEnc
-        ? decryptSecretValue(item.proxyPasswordEnc)
-        : null,
-    }));
+    let smtpAccounts: SmtpResolvedAccount[];
+    let resolvedPool: SmtpResolvedAccount[] = [];
 
-    const fallbackPort = userSmtp?.port || parseInt(process.env.SMTP_PORT || "465", 10);
-    const fallbackSecure = userSmtp?.secure ?? fallbackPort === 465;
-    const fallbackAccount: SmtpResolvedAccount | null =
-      (userSmtp?.host || process.env.SMTP_HOST) &&
-      (userSmtp?.username || process.env.SMTP_USER) &&
-      (userSmtp?.passwordEnc || process.env.SMTP_PASS)
-        ? {
-            id: "single",
-            host: userSmtp?.host || process.env.SMTP_HOST || "",
-            port: fallbackPort,
-            secure: fallbackSecure,
-            username: userSmtp?.username || process.env.SMTP_USER || "",
-            password: userSmtp
-              ? decryptSecretValue(userSmtp.passwordEnc)
-              : process.env.SMTP_PASS || "",
-            senderKey: (
-              userSmtp?.fromEmail ||
-              process.env.SMTP_FROM ||
-              userSmtp?.username ||
-              process.env.SMTP_USER ||
-              ""
-            )
-              .trim()
-              .toLowerCase(),
-            fromEmail: userSmtp?.fromEmail || process.env.SMTP_FROM || null,
-            fromName: userSmtp?.fromName || null,
-          }
-        : null;
+    if (campaign.sendingAccountId) {
+      const focused = await prisma.desktopSmtpPoolAccount.findUnique({
+        where: { id: campaign.sendingAccountId },
+        select: {
+          id: true,
+          desktopUserId: true,
+          active: true,
+          host: true,
+          port: true,
+          secure: true,
+          username: true,
+          passwordEnc: true,
+          fromEmail: true,
+          fromName: true,
+          proxyType: true,
+          proxyHost: true,
+          proxyPort: true,
+          proxyUsername: true,
+          proxyPasswordEnc: true,
+        },
+      });
 
-    if (resolvedPool.length === 0 && !fallbackAccount) {
-      throw new Error("SMTP not configured for this account");
+      if (!focused || focused.desktopUserId !== desktopUserId || !focused.active) {
+        await failCampaignWith("Selected sending account no longer available");
+        return;
+      }
+
+      const focusedResolved: SmtpResolvedAccount = {
+        id: focused.id,
+        host: focused.host,
+        port: focused.port,
+        secure: focused.secure,
+        username: focused.username,
+        password: decryptSecretValue(focused.passwordEnc),
+        senderKey: (focused.fromEmail || focused.username).trim().toLowerCase(),
+        fromEmail: focused.fromEmail,
+        fromName: focused.fromName,
+        proxyType: focused.proxyType,
+        proxyHost: focused.proxyHost,
+        proxyPort: focused.proxyPort,
+        proxyUsername: focused.proxyUsername,
+        proxyPassword: focused.proxyPasswordEnc
+          ? decryptSecretValue(focused.proxyPasswordEnc)
+          : null,
+      };
+
+      console.log(
+        `[Mailer] Focused Send: Using specific account ${focusedResolved.username} for Campaign ${campaignId}`,
+      );
+
+      smtpAccounts = [focusedResolved];
+    } else {
+      const smtpPoolAccounts = await prisma.desktopSmtpPoolAccount.findMany({
+        where: { desktopUserId, active: true },
+        orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
+        select: {
+          id: true,
+          host: true,
+          port: true,
+          secure: true,
+          username: true,
+          passwordEnc: true,
+          fromEmail: true,
+          fromName: true,
+          proxyType: true,
+          proxyHost: true,
+          proxyPort: true,
+          proxyUsername: true,
+          proxyPasswordEnc: true,
+        },
+      });
+
+      resolvedPool = smtpPoolAccounts.map((item) => ({
+        id: item.id,
+        host: item.host,
+        port: item.port,
+        secure: item.secure,
+        username: item.username,
+        password: decryptSecretValue(item.passwordEnc),
+        senderKey: (item.fromEmail || item.username).trim().toLowerCase(),
+        fromEmail: item.fromEmail,
+        fromName: item.fromName,
+        proxyType: item.proxyType,
+        proxyHost: item.proxyHost,
+        proxyPort: item.proxyPort,
+        proxyUsername: item.proxyUsername,
+        proxyPassword: item.proxyPasswordEnc
+          ? decryptSecretValue(item.proxyPasswordEnc)
+          : null,
+      }));
+
+      const fallbackPort = userSmtp?.port || parseInt(process.env.SMTP_PORT || "465", 10);
+      const fallbackSecure = userSmtp?.secure ?? fallbackPort === 465;
+      const fallbackAccount: SmtpResolvedAccount | null =
+        (userSmtp?.host || process.env.SMTP_HOST) &&
+        (userSmtp?.username || process.env.SMTP_USER) &&
+        (userSmtp?.passwordEnc || process.env.SMTP_PASS)
+          ? {
+              id: "single",
+              host: userSmtp?.host || process.env.SMTP_HOST || "",
+              port: fallbackPort,
+              secure: fallbackSecure,
+              username: userSmtp?.username || process.env.SMTP_USER || "",
+              password: userSmtp
+                ? decryptSecretValue(userSmtp.passwordEnc)
+                : process.env.SMTP_PASS || "",
+              senderKey: (
+                userSmtp?.fromEmail ||
+                process.env.SMTP_FROM ||
+                userSmtp?.username ||
+                process.env.SMTP_USER ||
+                ""
+              )
+                .trim()
+                .toLowerCase(),
+              fromEmail: userSmtp?.fromEmail || process.env.SMTP_FROM || null,
+              fromName: userSmtp?.fromName || null,
+            }
+          : null;
+
+      if (resolvedPool.length === 0 && !fallbackAccount) {
+        await failCampaignWith("SMTP not configured for this account");
+        return;
+      }
+
+      smtpAccounts = resolvedPool.length > 0 ? resolvedPool : [fallbackAccount!];
     }
-
-    const smtpAccounts = resolvedPool.length > 0 ? resolvedPool : [fallbackAccount!];
     const transporters = new Map<string, nodemailer.Transporter>();
     const accountFailures = new Map<string, number>();
     const warmupState = new Map<string, WarmupSenderState>();
@@ -713,6 +794,9 @@ async function processCampaignSend(job: Job<CampaignSendJobData>): Promise<void>
           }
           transporter = nodemailer.createTransport(transportConfig as any);
           transporters.set(smtpAccount.id, transporter);
+          console.log(
+            `[Mailer] Sending via ${smtpAccount.host} using account ${smtpAccount.username}`,
+          );
         }
 
         // Send with retry

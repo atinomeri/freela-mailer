@@ -551,6 +551,7 @@ export default function NewCampaignPage() {
         previewText: previewText.trim() || undefined,
         senderName: senderName.trim() || undefined,
         senderEmail: senderEmail.trim() || undefined,
+        sendingAccountId: selectedAccountId || undefined,
         html: html.trim(),
         contactListId: audienceListId,
         scheduleMode: "ONCE",

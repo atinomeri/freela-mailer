@@ -342,6 +342,7 @@ export const createCampaignSchema = z.object({
   previewText: z.string().max(255).optional(),
   senderName: z.string().max(200).optional(),
   senderEmail: z.string().email("Invalid sender email").optional(),
+  sendingAccountId: z.string().min(1).max(100).optional(),
   html: z.string().min(1, "HTML body is required"),
   contactListId: z.string().min(1).optional(),
   preflight: z.object({
@@ -372,6 +373,7 @@ export const updateCampaignSchema = z.object({
   previewText: z.string().max(255).nullable().optional(),
   senderName: z.string().max(200).nullable().optional(),
   senderEmail: z.string().email("Invalid sender email").nullable().optional(),
+  sendingAccountId: z.string().min(1).max(100).nullable().optional(),
   html: z.string().min(1).optional(),
   scheduleMode: campaignScheduleModeSchema.optional(),
   scheduledAt: z.string().datetime().nullable().optional(),

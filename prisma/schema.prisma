@@ -217,6 +217,8 @@ model DesktopSmtpPoolAccount {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
+  campaigns        Campaign[]
+
   @@index([desktopUserId, active, priority, createdAt])
 }
 
@@ -420,6 +422,12 @@ model Campaign {
   contactListId   String?
   contactList     ContactList?         @relation(fields: [contactListId], references: [id], onDelete: SetNull)
 
+  // Optional binding to a specific sending account in DesktopSmtpPoolAccount.
+  // When set, the worker uses ONLY this account (no rotation, no fallback).
+  // When null, the worker rotates through the user's active pool.
+  sendingAccountId String?
+  sendingAccount   DesktopSmtpPoolAccount? @relation(fields: [sendingAccountId], references: [id], onDelete: SetNull)
+
   scheduledAt     DateTime?
   dailyLimit      Int?
   dailySendTime   String?
@@ -447,6 +455,7 @@ model Campaign {
 
   @@index([desktopUserId, createdAt])
   @@index([status])
+  @@index([sendingAccountId])
 }
 
 model CampaignFailedRecipient {

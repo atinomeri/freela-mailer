@@ -34,6 +34,7 @@ export async function POST(req: Request) {
       previewText,
       senderName,
       senderEmail,
+      sendingAccountId,
       html,
       contactListId,
       preflight,
@@ -75,6 +76,20 @@ export async function POST(req: Request) {
       resolvedTotalCount = list.contactCount;
     }
 
+    let resolvedSendingAccountId: string | null = null;
+    if (sendingAccountId) {
+      const account = await prisma.desktopSmtpPoolAccount.findUnique({
+        where: { id: sendingAccountId },
+        select: { id: true, desktopUserId: true, active: true },
+      });
+      if (!account) return errors.notFound("Sending account");
+      if (account.desktopUserId !== auth.user.id) return errors.forbidden();
+      if (!account.active) {
+        return errors.badRequest("Selected sending account is inactive");
+      }
+      resolvedSendingAccountId = account.id;
+    }
+
     const campaign = await prisma.campaign.create({
       data: {
         desktopUserId: auth.user.id,
@@ -83,6 +98,7 @@ export async function POST(req: Request) {
         previewText: previewText ?? null,
         senderName: senderName ?? null,
         senderEmail: senderEmail ?? null,
+        sendingAccountId: resolvedSendingAccountId,
         html,
         contactListId: resolvedContactListId,
         scheduleMode,
@@ -103,6 +119,7 @@ export async function POST(req: Request) {
         previewText: true,
         senderName: true,
         senderEmail: true,
+        sendingAccountId: true,
         status: true,
         contactListId: true,
         scheduleMode: true,

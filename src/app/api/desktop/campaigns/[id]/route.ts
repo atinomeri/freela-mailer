@@ -32,6 +32,7 @@ export async function GET(
         previewText: true,
         senderName: true,
         senderEmail: true,
+        sendingAccountId: true,
         html: true,
         status: true,
         contactListId: true,
@@ -111,8 +112,25 @@ export async function PATCH(
       scheduledAt,
       dailyLimit,
       dailySendTime,
+      sendingAccountId,
       ...rest
     } = parsed.data;
+
+    let sendingAccountUpdate: { sendingAccountId: string | null } | undefined;
+    if (sendingAccountId === null) {
+      sendingAccountUpdate = { sendingAccountId: null };
+    } else if (typeof sendingAccountId === "string") {
+      const account = await prisma.desktopSmtpPoolAccount.findUnique({
+        where: { id: sendingAccountId },
+        select: { id: true, desktopUserId: true, active: true },
+      });
+      if (!account) return errors.notFound("Sending account");
+      if (account.desktopUserId !== auth.user.id) return errors.forbidden();
+      if (!account.active) {
+        return errors.badRequest("Selected sending account is inactive");
+      }
+      sendingAccountUpdate = { sendingAccountId: account.id };
+    }
 
     const shouldResetPreflight =
       parsed.data.subject !== undefined ||
@@ -157,6 +175,7 @@ export async function PATCH(
       where: { id },
       data: {
         ...rest,
+        ...(sendingAccountUpdate ?? {}),
         ...(scheduleMode !== undefined ? { scheduleMode: targetScheduleMode } : {}),
         ...(nextScheduledAt !== undefined ? { scheduledAt: nextScheduledAt } : {}),
         ...(targetScheduleMode === "DAILY"
@@ -194,6 +213,7 @@ export async function PATCH(
         previewText: true,
         senderName: true,
         senderEmail: true,
+        sendingAccountId: true,
         status: true,
         contactListId: true,
         scheduleMode: true,
