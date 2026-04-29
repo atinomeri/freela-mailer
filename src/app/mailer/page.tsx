@@ -166,8 +166,6 @@ export default function MailerDashboard() {
       : queueTotal > 0
         ? Math.min(100, Math.round((queueProcessed / queueTotal) * 100))
         : 0;
-  const hasCampaign = Boolean(campaign);
-
   const metrics: Array<{
     key: string;
     label: string;
@@ -217,29 +215,23 @@ export default function MailerDashboard() {
         eyebrow={t("dashboard.workspaceLabel")}
         title={t("dashboard.missionControl.title")}
         description={t("dashboard.missionControl.description")}
-        actions={
-          <div className="flex flex-wrap items-center gap-4">
+        center={
+          <div className="flex flex-wrap items-center gap-3">
             <WorkerStatus />
             <DomainHealthStatus />
+          </div>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
             <ThemeToggle />
-            <div
-              className={
-                hasCampaign
-                  ? "max-w-[220px] opacity-100 transition-[max-width,opacity] duration-200"
-                  : "pointer-events-none max-w-0 overflow-hidden opacity-0 transition-[max-width,opacity] duration-200"
-              }
-              aria-hidden={!hasCampaign}
+            <ButtonLink
+              href="/campaigns/new"
+              size="md"
+              leftIcon={<Plus className="h-4 w-4" />}
+              className="min-h-11 rounded-xl px-4 font-extrabold"
             >
-              <ButtonLink
-                href="/campaigns/new"
-                size="md"
-                leftIcon={<Plus className="h-4 w-4" />}
-                className="min-h-10 rounded-xl px-4"
-                tabIndex={hasCampaign ? undefined : -1}
-              >
-                {t("actions.newCampaign")}
-              </ButtonLink>
-            </div>
+              {t("actions.newCampaign")}
+            </ButtonLink>
           </div>
         }
       />

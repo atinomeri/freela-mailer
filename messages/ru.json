@@ -581,18 +581,27 @@
     },
     "workerStatus": {
       "label": "Воркер",
+      "active": "Активен",
       "online": "Активен",
       "offline": "Неактивен",
       "checking": "Проверка",
       "tooltip": "Состояние воркера"
     },
     "domainHealth": {
-      "label": "Домен",
+      "label": "Домены",
       "checking": "Проверка",
-      "healthy": "SPF/DKIM в порядке",
-      "warning": "SPF/DKIM требует проверки",
-      "failed": "SPF/DKIM не пройден",
-      "tooltip": "Состояние домена"
+      "summary": "Домены: {ready}/{total} готовы",
+      "healthy": "Готовы",
+      "warning": "Нужна проверка",
+      "failed": "Требует внимания",
+      "detailsTitle": "Безопасность доменов",
+      "empty": "Домены отправки не найдены",
+      "tooltip": "Состояние безопасности доменов",
+      "statuses": {
+        "ready": "Готов",
+        "review": "Нужна проверка",
+        "failed": "Требует внимания"
+      }
     },
     "languageSwitch": {
       "label": "Язык",

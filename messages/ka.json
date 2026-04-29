@@ -581,18 +581,27 @@
     },
     "workerStatus": {
       "label": "ვორკერი",
-      "online": "ჩართულია",
+      "active": "აქტიურია",
+      "online": "აქტიურია",
       "offline": "გამორთულია",
       "checking": "მოწმდება",
       "tooltip": "ვორკერის მდგომარეობა"
     },
     "domainHealth": {
-      "label": "დომენი",
+      "label": "დომენები",
       "checking": "მოწმდება",
-      "healthy": "SPF/DKIM ვალიდურია",
-      "warning": "SPF/DKIM გადასამოწმებელია",
-      "failed": "SPF/DKIM ვერ მოწმდება",
-      "tooltip": "დომენის მდგომარეობა"
+      "summary": "დომენები: {ready}/{total} მზად",
+      "healthy": "მზადაა",
+      "warning": "გადასამოწმებელია",
+      "failed": "ყურადღება სჭირდება",
+      "detailsTitle": "დომენების უსაფრთხოება",
+      "empty": "გაგზავნის დომენები ვერ მოიძებნა",
+      "tooltip": "დომენების უსაფრთხოების მდგომარეობა",
+      "statuses": {
+        "ready": "მზადაა",
+        "review": "გადასამოწმებელია",
+        "failed": "ყურადღება სჭირდება"
+      }
     },
     "languageSwitch": {
       "label": "ენა",

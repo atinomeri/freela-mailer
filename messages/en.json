@@ -581,18 +581,27 @@
     },
     "workerStatus": {
       "label": "Worker",
-      "online": "Online",
+      "active": "Active",
+      "online": "Active",
       "offline": "Offline",
       "checking": "Checking",
       "tooltip": "Worker health"
     },
     "domainHealth": {
-      "label": "Domain",
+      "label": "Domains",
       "checking": "Checking",
-      "healthy": "SPF/DKIM pass",
-      "warning": "SPF/DKIM review",
-      "failed": "SPF/DKIM failed",
-      "tooltip": "Domain health"
+      "summary": "Domains: {ready}/{total} Ready",
+      "healthy": "Ready",
+      "warning": "Review needed",
+      "failed": "Needs attention",
+      "detailsTitle": "Domain security",
+      "empty": "No sending domains found",
+      "tooltip": "Domain security status",
+      "statuses": {
+        "ready": "Ready",
+        "review": "Review needed",
+        "failed": "Needs attention"
+      }
     },
     "languageSwitch": {
       "label": "Language",
