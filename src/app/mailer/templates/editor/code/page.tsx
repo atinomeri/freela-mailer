@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { ArrowLeft, Code2, Eye, EyeOff, ExternalLink, Save } from "lucide-react";
 import { MailerLoginPage } from "../../../login-page";
 import { useMailerAuth } from "@/lib/mailer-auth";
@@ -35,18 +36,74 @@ function useDebounced<T>(value: T, ms: number): T {
 }
 
 export default function MailerCodeEditorPage() {
+  return (
+    <Suspense fallback={null}>
+      <MailerCodeEditorPageInner />
+    </Suspense>
+  );
+}
+
+function MailerCodeEditorPageInner() {
   const { user, apiFetch } = useMailerAuth();
   const t = useTranslations("mailer.templatesEditor");
+  const searchParams = useSearchParams();
+  const initialId = searchParams.get("id");
 
   const [name, setName] = useState("Untitled Template");
   const [source, setSource] = useState(DEFAULT_HTML);
-  const [templateId, setTemplateId] = useState<string | null>(null);
+  const [templateId, setTemplateId] = useState<string | null>(initialId);
   const [saving, setSaving] = useState(false);
+  const [loadingTemplate, setLoadingTemplate] = useState(Boolean(initialId));
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [previewOpen, setPreviewOpen] = useState(true);
 
   const previewHtml = useDebounced(source, 200);
+
+  useEffect(() => {
+    if (!user || !initialId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch(
+          `/api/desktop/editor-templates/${encodeURIComponent(initialId)}`,
+        );
+        if (!res.ok) {
+          throw new Error(
+            res.status === 404 ? "Template not found" : "Failed to load template",
+          );
+        }
+        const body = (await res.json().catch(() => null)) as {
+          ok?: boolean;
+          data?: {
+            name: string;
+            editorProjectJson: { kind?: string; source?: string } | null;
+            htmlOutput?: string;
+          };
+          error?: { message?: string };
+        } | null;
+        if (!body?.ok || !body.data) {
+          throw new Error(body?.error?.message || "Failed to load template");
+        }
+        if (cancelled) return;
+        setName(body.data.name || "Untitled Template");
+        const savedSource =
+          typeof body.data.editorProjectJson?.source === "string"
+            ? body.data.editorProjectJson.source
+            : body.data.htmlOutput;
+        if (savedSource) setSource(savedSource);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load template");
+        }
+      } finally {
+        if (!cancelled) setLoadingTemplate(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, initialId, apiFetch]);
 
   if (!user) return <MailerLoginPage />;
 
@@ -105,7 +162,7 @@ export default function MailerCodeEditorPage() {
       <header className="sticky top-0 z-30 grid h-20 w-full shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-slate-100 bg-white px-4 dark:border-[#1F2937] dark:bg-[#161B22] sm:px-6">
         <div className="flex min-w-0 items-center gap-1">
           <Link
-            href="/templates/editor"
+            href="/mailer/templates/editor"
             className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#1F2937] dark:hover:text-slate-100"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -147,7 +204,7 @@ export default function MailerCodeEditorPage() {
           <button
             type="button"
             onClick={() => void handleSave()}
-            disabled={!name.trim() || saving}
+            disabled={!name.trim() || saving || loadingTemplate}
             className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-[13px] font-semibold text-white shadow-[0_1px_2px_rgba(79,70,229,0.18)] transition-all duration-200 hover:bg-indigo-700 hover:shadow-[0_4px_12px_-2px_rgba(79,70,229,0.4)] disabled:opacity-50"
           >
             <Save className="h-3.5 w-3.5" />

@@ -39,6 +39,7 @@ interface TemplateItem {
   html: string;
   description?: string | null;
   builtIn: boolean;
+  editorKind?: string | null;
 }
 
 interface ApiErrorShape {
@@ -67,9 +68,9 @@ export default function MailerTemplatesPage() {
 
   function handleCreateNew() {
     setRedirecting(true);
-    router.push("/templates/editor");
+    router.push("/mailer/templates/editor");
   }
-  // /templates/editor now shows the 3-card chooser; sub-routes are /drag, /rich, /code.
+  // /mailer/templates/editor shows the 3-card chooser; sub-routes are /drag, /rich, /code.
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -369,6 +370,7 @@ function TemplateCard({
   deleting: boolean;
 }) {
   const t = useTranslations("mailer");
+  const editorHref = getEditorHref(template);
   return (
     <div
       className={cn(
@@ -404,15 +406,27 @@ function TemplateCard({
         {(onEdit || onDelete) && (
           <div className="flex items-center gap-2 border-t border-slate-50 pt-5 dark:border-border/60">
             {onEdit && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onEdit}
-                leftIcon={<Pencil className="h-3.5 w-3.5" />}
-                className="flex-1"
-              >
-                {t("templates.edit")}
-              </Button>
+              editorHref ? (
+                <ButtonLink
+                  href={editorHref}
+                  variant="secondary"
+                  size="sm"
+                  leftIcon={<Pencil className="h-3.5 w-3.5" />}
+                  className="flex-1"
+                >
+                  {t("templates.edit")}
+                </ButtonLink>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onEdit}
+                  leftIcon={<Pencil className="h-3.5 w-3.5" />}
+                  className="flex-1"
+                >
+                  {t("templates.edit")}
+                </Button>
+              )
             )}
             {onDelete && (
               <Button
@@ -432,6 +446,13 @@ function TemplateCard({
       </div>
     </div>
   );
+}
+
+function getEditorHref(template: TemplateItem): string | null {
+  if (!template.editorKind) return null;
+  const mode = template.editorKind === "html" ? "code" : template.editorKind;
+  if (mode !== "drag" && mode !== "rich" && mode !== "code") return null;
+  return `/mailer/templates/editor/${mode}?id=${encodeURIComponent(template.id)}`;
 }
 
 function TemplatePreview({ html }: { html: string }) {

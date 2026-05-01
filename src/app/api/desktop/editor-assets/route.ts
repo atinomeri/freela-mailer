@@ -46,7 +46,7 @@ export async function GET(req: Request) {
             name: entry.name,
             size: stat.size,
             updatedAt: stat.mtime.toISOString(),
-            url: buildAssetPublicUrl(auth.user.id, entry.name),
+            url: buildAssetPublicUrl(auth.user.id, entry.name, new URL(req.url).origin),
           };
         }),
     );
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
         name: storedName,
         size: file.size,
         type: file.type,
-        url: buildAssetPublicUrl(auth.user.id, storedName),
+        url: buildAssetPublicUrl(auth.user.id, storedName, new URL(req.url).origin),
       });
     }
 

@@ -30,6 +30,7 @@ export function resolveAssetPath(userId: string, fileName: string): string {
   return path.join(resolveUserAssetsDir(userId), fileName);
 }
 
-export function buildAssetPublicUrl(userId: string, fileName: string): string {
-  return `/api/editor-assets/${encodeURIComponent(userId)}/${encodeURIComponent(fileName)}`;
+export function buildAssetPublicUrl(userId: string, fileName: string, origin?: string): string {
+  const path = `/api/editor-assets/${encodeURIComponent(userId)}/${encodeURIComponent(fileName)}`;
+  return origin ? `${origin}${path}` : path;
 }

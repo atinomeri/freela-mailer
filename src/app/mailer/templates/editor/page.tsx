@@ -19,14 +19,14 @@ export default function MailerTemplateChooserPage() {
   if (!user) return <MailerLoginPage />;
 
   function pick(mode: EditorMode) {
-    router.push(`/templates/editor/${mode}`);
+    router.push(`/mailer/templates/editor/${mode}`);
   }
 
   return (
     <div className="flex min-h-dvh flex-col bg-[#F8FAFC] dark:bg-[#0B0E11] animate-[fadeIn_220ms_ease-out]">
       <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 dark:border-[#1F2937] dark:bg-[#161B22] sm:px-6">
         <Link
-          href="/templates"
+          href="/mailer/templates"
           className="inline-flex h-9 items-center gap-1.5 rounded-[14px] border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-[#1F2937] dark:bg-[#161B22] dark:text-slate-200 dark:hover:bg-[#1F2937]"
         >
           <ArrowLeft className="h-3.5 w-3.5" />

@@ -38,13 +38,39 @@ export async function GET(req: Request) {
       },
     });
 
+    const editorRows = custom.length > 0
+      ? await prisma.mailerEditorTemplate.findMany({
+          where: {
+            desktopUserId: auth.user.id,
+            id: { in: custom.map((item) => item.id) },
+          },
+          select: {
+            id: true,
+            editorProjectJson: true,
+          },
+        })
+      : [];
+    const editorKinds = new Map(
+      editorRows.map((item) => {
+        const project = item.editorProjectJson as { kind?: unknown } | null;
+        return [
+          item.id,
+          typeof project?.kind === "string" ? project.kind : "drag",
+        ] as const;
+      }),
+    );
+
     const builtins = category
       ? BUILTIN_MAILER_TEMPLATES.filter((item) => item.category === category)
       : BUILTIN_MAILER_TEMPLATES;
 
     return success([
       ...builtins,
-      ...custom.map((item) => ({ ...item, builtIn: false as const })),
+      ...custom.map((item) => ({
+        ...item,
+        builtIn: false as const,
+        editorKind: editorKinds.get(item.id) ?? null,
+      })),
     ]);
   } catch (err) {
     console.error("[Template List] Error:", err);
@@ -90,4 +116,3 @@ export async function POST(req: Request) {
     return errors.serverError();
   }
 }
-
