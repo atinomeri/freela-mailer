@@ -27,11 +27,11 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "grid min-h-20 gap-4 border-b border-slate-200 pb-6 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center dark:border-border",
+        "grid min-h-20 min-w-0 max-w-full gap-4 border-b border-slate-200 pb-6 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center dark:border-border",
         className,
       )}
     >
-      <div className="flex items-center gap-3 lg:col-start-1">
+      <div className="flex min-w-0 items-center gap-3 lg:col-start-1">
         {backButton}
         <div className="min-w-0 space-y-1">
           {eyebrow && (
@@ -40,12 +40,12 @@ export function PageHeader({
             </div>
           )}
           <div>
-            <h1 className="text-[22px] font-extrabold tracking-tight text-slate-950 dark:text-foreground sm:text-[28px]">
+            <h1 className="break-words text-[22px] font-extrabold tracking-tight text-slate-950 dark:text-foreground sm:text-[28px]">
               {title}
             </h1>
           </div>
           {description && (
-            <p className="max-w-2xl text-[14px] font-semibold leading-6 text-slate-500 dark:text-muted-foreground">
+            <p className="max-w-2xl break-words text-[14px] font-semibold leading-6 text-slate-500 dark:text-muted-foreground">
               {description}
             </p>
           )}
@@ -64,7 +64,7 @@ export function PageHeader({
       )}
 
       {actions && (
-        <div className="flex min-w-0 shrink-0 items-center justify-start gap-3 lg:col-start-3 lg:justify-end">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center justify-start gap-3 lg:col-start-3 lg:justify-end">
           {actions}
         </div>
       )}

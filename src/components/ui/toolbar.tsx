@@ -12,7 +12,7 @@ export function Toolbar({ children, className, bare = false }: ToolbarProps) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center",
+        "flex min-w-0 max-w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center",
         !bare &&
           "rounded-2xl border border-border/70 bg-card p-3 shadow-[0_1px_2px_hsl(var(--foreground)/0.04)]",
         className,

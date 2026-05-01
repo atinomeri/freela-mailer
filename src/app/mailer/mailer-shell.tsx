@@ -15,8 +15,6 @@ import {
   FileText,
   Settings,
   History,
-  ShieldCheck,
-  BarChart3,
 } from "lucide-react";
 import { useState } from "react";
 import { PageSpinner } from "@/components/ui/spinner";
@@ -29,9 +27,7 @@ const NAV_ITEMS = [
   { href: "/contacts", key: "nav.contacts", icon: Users, adminOnly: false },
   { href: "/templates", key: "nav.templates", icon: FileText, adminOnly: false },
   { href: "/reports", key: "nav.reports", icon: History, adminOnly: false },
-  { href: "/analytics", key: "nav.analytics", icon: BarChart3, adminOnly: false },
   { href: "/settings", key: "nav.settings", icon: Settings, adminOnly: false },
-  { href: "/admin", key: "nav.admin", icon: ShieldCheck, adminOnly: true },
 ] as const;
 
 export function MailerShell({ children }: { children: React.ReactNode }) {
@@ -66,7 +62,7 @@ export function MailerShell({ children }: { children: React.ReactNode }) {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <div className="flex min-h-dvh bg-[#F8FAFC] text-slate-900 dark:bg-background dark:text-foreground">
+    <div className="flex min-h-dvh overflow-x-hidden bg-[#F8FAFC] text-slate-900 dark:bg-background dark:text-foreground">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -153,9 +149,9 @@ export function MailerShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile header */}
-        <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden dark:border-border dark:bg-card">
+        <header className="flex h-20 min-w-0 items-center justify-between gap-3 overflow-hidden border-b border-slate-200 bg-white px-4 lg:hidden dark:border-border dark:bg-card">
           <div className="flex items-center gap-4">
             <button
               className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -166,13 +162,13 @@ export function MailerShell({ children }: { children: React.ReactNode }) {
             </button>
             <span className="text-[15px] font-bold tracking-normal">{t("brand")}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 shrink-0 items-center gap-2">
             <LanguageSwitch />
             <ThemeToggle />
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto px-4 py-8 sm:px-6 lg:px-8 lg:py-10">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-6 lg:px-8 lg:py-10">{children}</main>
       </div>
     </div>
   );

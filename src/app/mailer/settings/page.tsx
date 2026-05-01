@@ -2,14 +2,13 @@
 
 import { useMailerAuth } from "@/lib/mailer-auth";
 import { useEffect, useState } from "react";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { Alert } from "@/components/ui/alert";
 import { MailerLoginPage } from "../login-page";
 import { useTranslations } from "next-intl";
-import { ArrowRight } from "lucide-react";
 
 interface MailerSettings {
   fromEmail?: string | null;
@@ -181,21 +180,6 @@ export default function MailerSettingsPage() {
                 />
               </label>
             </div>
-          </SectionCard>
-
-          {/* Sending accounts (link out) */}
-          <SectionCard
-            title={t("groups.sendingAccounts.title")}
-            description={t("groups.sendingAccounts.description")}
-          >
-            <ButtonLink
-              href="/smtp-pool"
-              variant="secondary"
-              size="md"
-              rightIcon={<ArrowRight className="h-4 w-4" />}
-            >
-              {t("groups.sendingAccounts.manageAction")}
-            </ButtonLink>
           </SectionCard>
 
           {/* Tracking */}

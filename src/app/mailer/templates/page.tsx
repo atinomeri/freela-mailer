@@ -446,10 +446,12 @@ function TemplatePreview({ html }: { html: string }) {
   // Sanitization note: templates come from the same workspace's authenticated API;
   // we render in a no-pointer container, never executing scripts on the user's behalf.
   return (
-    <div
-      className="pointer-events-none h-full w-full origin-top-left scale-[0.45] overflow-hidden bg-white p-4 text-foreground"
-      style={{ width: "222%", height: "222%" }}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className="relative h-full w-full overflow-hidden bg-white">
+      <div
+        className="pointer-events-none absolute left-0 top-0 origin-top-left overflow-hidden p-4 text-foreground"
+        style={{ width: "222%", height: "222%", transform: "scale(0.45)" }}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </div>
   );
 }

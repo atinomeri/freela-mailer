@@ -142,7 +142,7 @@
       "emptyContacts": "Import your contacts to get started",
       "missionControl": {
         "title": "Mission Control",
-        "description": "Active campaign delivery, queue progress, and sender health in one focused view.",
+        "description": "Active campaign performance and delivery progress in one focused view.",
         "emptyDescription": "Mission Control will show the last or currently active campaign once one exists.",
         "loadingCampaign": "Loading campaign"
       },
@@ -180,7 +180,7 @@
     },
     "settingsPage": {
       "title": "Settings",
-      "description": "Manage sender defaults, sending accounts, and tracking.",
+      "description": "Manage sender defaults and tracking.",
       "saveAction": "Save changes",
       "saveSuccess": "Settings saved.",
       "loading": "Loading...",

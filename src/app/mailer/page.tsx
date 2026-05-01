@@ -3,14 +3,12 @@
 import { useMailerAuth } from "@/lib/mailer-auth";
 import { useEffect, useMemo, useState } from "react";
 import { ButtonLink } from "@/components/ui/button";
-import { DomainHealthStatus } from "@/components/ui/domain-health-status";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MetricCard, type MetricTone } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Progress } from "@/components/ui/progress";
 import { SectionCard } from "@/components/ui/section-card";
 import { StatusPill, type CampaignStatus } from "@/components/ui/status-pill";
-import { WorkerStatus } from "@/components/ui/worker-status";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   ArrowRight,
@@ -215,12 +213,6 @@ export default function MailerDashboard() {
         eyebrow={t("dashboard.workspaceLabel")}
         title={t("dashboard.missionControl.title")}
         description={t("dashboard.missionControl.description")}
-        center={
-          <div className="flex flex-wrap items-center gap-3">
-            <WorkerStatus />
-            <DomainHealthStatus />
-          </div>
-        }
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <ThemeToggle />
