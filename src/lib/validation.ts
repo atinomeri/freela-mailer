@@ -422,6 +422,7 @@ export const mergeContactListsSchema = z.object({
 
 export const campaignPreflightRequestSchema = z.object({
   senderEmail: z.string().email("Invalid sender email").optional(),
+  sendingAccountId: z.string().min(1).max(100).optional(),
   subject: z.string().min(1).max(998),
   previewText: z.string().max(255).optional(),
   html: z.string().min(1).max(1_000_000),

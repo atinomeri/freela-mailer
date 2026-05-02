@@ -100,7 +100,16 @@ function enrichAccount(raw: SmtpPoolAccount): SenderAccount {
 interface PreflightResult {
   status: "good" | "warning" | "critical";
   recommendations: string[];
+  checks: PreflightCheck[];
   checkedAt: string;
+}
+
+interface PreflightCheck {
+  key: string;
+  status: "good" | "warning" | "critical";
+  title: string;
+  message: string;
+  details?: string;
 }
 
 type StepKey = "details" | "recipients" | "content" | "review";
@@ -283,6 +292,57 @@ function CheckStatusBadge({ status, t }: { status: PreflightResult["status"]; t:
   );
 }
 
+function CheckRow({ check, t }: { check: PreflightCheck; t: ReturnType<typeof useTranslations> }) {
+  const titleKey = `review.deliverabilityChecks.${check.key}.${check.status}.title`;
+  const messageKey = `review.deliverabilityChecks.${check.key}.${check.status}.message`;
+  const title = t.has(titleKey) ? t(titleKey) : check.title;
+  const message = t.has(messageKey) ? t(messageKey) : check.message;
+  const tone =
+    check.status === "good"
+      ? {
+          icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2.4} />,
+          badge: t("review.checksOk"),
+          className: "border-success/20 bg-success/5",
+          badgeClass: "bg-success/10 text-success",
+        }
+      : check.status === "warning"
+        ? {
+            icon: <TriangleAlert className="h-4 w-4 text-warning" strokeWidth={2.4} />,
+            badge: t("review.checksWarn"),
+            className: "border-warning/25 bg-warning/5",
+            badgeClass: "bg-warning/10 text-warning",
+          }
+        : {
+            icon: <AlertCircle className="h-4 w-4 text-destructive" strokeWidth={2.4} />,
+            badge: t("review.checksFail"),
+            className: "border-destructive/25 bg-destructive/5",
+            badgeClass: "bg-destructive/10 text-destructive",
+          };
+
+  return (
+    <li className={cn("rounded-lg border px-3 py-2.5", tone.className)}>
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 shrink-0">{tone.icon}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[13px] font-semibold text-foreground">{title}</p>
+            <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", tone.badgeClass)}>
+              {tone.badge}
+            </span>
+          </div>
+          <p className="mt-1 text-[12.5px] leading-5 text-muted-foreground">{message}</p>
+          {check.details && (
+            <details className="mt-1 text-[12px] text-muted-foreground">
+              <summary className="cursor-pointer font-medium">{t("review.technicalDetails")}</summary>
+              <p className="mt-1 break-words">{check.details}</p>
+            </details>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
+
 export default function NewCampaignPage() {
   const { user, apiFetch } = useMailerAuth();
   const router = useRouter();
@@ -425,12 +485,13 @@ export default function NewCampaignPage() {
     () =>
       JSON.stringify({
         senderEmail: senderEmail.trim().toLowerCase(),
+        sendingAccountId: selectedAccountId,
         subject: subject.trim(),
         previewText: previewText.trim(),
         html: html.trim(),
         recipientsCount,
       }),
-    [senderEmail, subject, previewText, html, recipientsCount],
+    [senderEmail, selectedAccountId, subject, previewText, html, recipientsCount],
   );
 
   const canGoNext = (currentStep: number): boolean => {
@@ -453,6 +514,7 @@ export default function NewCampaignPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             senderEmail,
+            sendingAccountId: selectedAccountId || undefined,
             subject,
             previewText,
             html,
@@ -485,6 +547,7 @@ export default function NewCampaignPage() {
       previewText,
       recipientsCount,
       senderEmail,
+      selectedAccountId,
       subject,
       t,
     ],
@@ -1041,10 +1104,10 @@ export default function NewCampaignPage() {
                   <CheckStatusBadge status={preflight.status} t={tw} />
                 ) : null}
               </div>
-              {preflight && preflight.recommendations.length > 0 ? (
-                <ul className="mt-3 space-y-1.5 pl-5 text-[13px] text-muted-foreground" style={{ listStyleType: "disc" }}>
-                  {preflight.recommendations.map((item, idx) => (
-                    <li key={`${item}-${idx}`}>{item}</li>
+              {preflight && preflight.checks?.length > 0 ? (
+                <ul className="mt-3 space-y-2">
+                  {preflight.checks.map((check) => (
+                    <CheckRow key={check.key} check={check} t={tw} />
                   ))}
                 </ul>
               ) : preflight ? (

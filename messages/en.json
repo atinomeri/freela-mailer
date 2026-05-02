@@ -462,13 +462,86 @@
         "summaryRecipients": "Recipients",
         "summarySender": "Sender",
         "summarySubject": "Subject",
-        "checksSection": "Pre-send checks",
+        "checksSection": "Sending readiness",
         "checksRunning": "Running pre-send checks...",
         "checksOk": "Looks good",
         "checksWarn": "Needs review",
-        "checksFail": "Needs attention",
+        "checksFail": "Needs fixing",
         "checksOkDescription": "Everything looks ready to send.",
         "noRecommendations": "No issues found.",
+        "technicalDetails": "Details",
+        "deliverabilityChecks": {
+          "sending_account": {
+            "good": {
+              "title": "Sending account is ready",
+              "message": "This account is active for sending."
+            },
+            "warning": {
+              "title": "Sending account not tested",
+              "message": "Send a test from this account before a real campaign."
+            },
+            "critical": {
+              "title": "Sending account needs attention",
+              "message": "Test or replace this sending account before sending."
+            }
+          },
+          "domain_setup": {
+            "good": {
+              "title": "Sender domain is prepared",
+              "message": "The sender domain has the records mail providers expect."
+            },
+            "warning": {
+              "title": "Improve sender domain setup",
+              "message": "Ask your mail provider to check SPF, DKIM, and DMARC for this domain."
+            },
+            "critical": {
+              "title": "Sender domain needs fixing",
+              "message": "Fix the sender domain setup before sending."
+            }
+          },
+          "sender_alignment": {
+            "good": {
+              "title": "Sender domain matches",
+              "message": "The visible sender matches the selected account domain."
+            },
+            "warning": {
+              "title": "Sender domain is different",
+              "message": "Use the same domain as the sending account for better Gmail and Yahoo trust."
+            },
+            "critical": {
+              "title": "Sender email is missing",
+              "message": "Add a valid sender email before sending."
+            }
+          },
+          "unsubscribe": {
+            "good": {
+              "title": "Unsubscribe link found",
+              "message": "Recipients have a clear way to opt out."
+            },
+            "warning": {
+              "title": "Add unsubscribe link",
+              "message": "Add a clear unsubscribe option to reduce spam complaints."
+            },
+            "critical": {
+              "title": "Unsubscribe needs fixing",
+              "message": "Add a clear unsubscribe option before sending."
+            }
+          },
+          "content": {
+            "good": {
+              "title": "Content looks good",
+              "message": "Subject, content, links, and images look reasonable."
+            },
+            "warning": {
+              "title": "Content can be improved",
+              "message": "Review the subject, preview text, links, images, and message length."
+            },
+            "critical": {
+              "title": "Content needs fixing",
+              "message": "Add the required campaign content before sending."
+            }
+          }
+        },
         "confirmLabel": "I confirm this campaign is ready to send."
       },
       "send": {
