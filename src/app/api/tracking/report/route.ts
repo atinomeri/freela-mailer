@@ -42,7 +42,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Ownership check: if report already exists, verify ownership ──
+    // ── Ownership check: campaign must exist and belong to the caller. ──
+    // Authoritative source is Campaign.desktopUserId — never trust the
+    // existing CampaignReport row alone, since a missing or null-owned
+    // report would otherwise let any signed-in user claim it via upsert.
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaign_id },
+      select: { desktopUserId: true },
+    });
+
+    if (!campaign) {
+      return NextResponse.json(
+        { ok: false, error: "Campaign not found" },
+        { status: 404 }
+      );
+    }
+
+    if (campaign.desktopUserId !== desktopUserId) {
+      return NextResponse.json(
+        { ok: false, error: "Forbidden: campaign belongs to another user" },
+        { status: 403 }
+      );
+    }
+
+    // ── Existing-report ownership check (defense in depth). ──
     let existing: { desktopUserId: string | null } | null = null;
     try {
       existing = await prisma.campaignReport.findUnique({
