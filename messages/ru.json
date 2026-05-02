@@ -196,19 +196,11 @@
     },
     "settingsPage": {
       "title": "Настройки",
-      "description": "Управляйте настройками отправителя и отслеживанием.",
+      "description": "Управляйте настройками отслеживания.",
       "saveAction": "Сохранить",
       "saveSuccess": "Настройки сохранены.",
       "loading": "Загружаем...",
       "groups": {
-        "senderDefaults": {
-          "title": "Отправитель по умолчанию",
-          "description": "Используются, если у аккаунта отправки нет своих данных отправителя.",
-          "fromEmailLabel": "Email по умолчанию",
-          "fromEmailPlaceholder": "sender@company.com",
-          "fromNameLabel": "Имя по умолчанию",
-          "fromNamePlaceholder": "Команда или бренд"
-        },
         "sendingAccounts": {
           "title": "Аккаунты отправки",
           "description": "Подключите почтовый сервис, чтобы кампании отправлялись.",

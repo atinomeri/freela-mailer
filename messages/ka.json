@@ -196,19 +196,11 @@
     },
     "settingsPage": {
       "title": "პარამეტრები",
-      "description": "მართე გამგზავნის ნაგულისხმევი მნიშვნელობები და ტრეკინგი.",
+      "description": "მართე ტრეკინგის პარამეტრები.",
       "saveAction": "შენახვა",
       "saveSuccess": "პარამეტრები შენახულია.",
       "loading": "იტვირთება...",
       "groups": {
-        "senderDefaults": {
-          "title": "გამგზავნის ნაგულისხმევი მნიშვნელობები",
-          "description": "გამოიყენება, თუ გაგზავნის ანგარიში თვითონ არ განსაზღვრავს გამგზავნის მონაცემებს.",
-          "fromEmailLabel": "ნაგულისხმევი ელფოსტა",
-          "fromEmailPlaceholder": "sender@company.com",
-          "fromNameLabel": "ნაგულისხმევი სახელი",
-          "fromNamePlaceholder": "შენი გუნდის ან ბრენდის სახელი"
-        },
         "sendingAccounts": {
           "title": "გაგზავნის ანგარიშები",
           "description": "დააკავშირე ელფოსტის სერვისი კამპანიების გასაგზავნად.",

@@ -3,7 +3,6 @@
 import { useMailerAuth } from "@/lib/mailer-auth";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { Alert } from "@/components/ui/alert";
@@ -11,8 +10,6 @@ import { MailerLoginPage } from "../login-page";
 import { useTranslations } from "next-intl";
 
 interface MailerSettings {
-  fromEmail?: string | null;
-  fromName?: string | null;
   trackOpens?: boolean;
   trackClicks?: boolean;
   source: "env" | "user";
@@ -21,25 +18,6 @@ interface MailerSettings {
 interface ApiErrorShape {
   error?: string | { message?: string };
   message?: string;
-}
-
-function parseFromAddress(raw: string | null | undefined): {
-  email: string;
-  name: string;
-} {
-  const value = raw?.trim() || "";
-  if (!value) return { email: "", name: "" };
-
-  const angleMatch = value.match(/^(?:"?([^"]*)"?\s*)?<\s*([^<>]+)\s*>$/);
-  if (angleMatch) {
-    const maybeEmail = angleMatch[2]?.trim() || "";
-    const maybeName = angleMatch[1]?.trim() || "";
-    if (maybeEmail.includes("@")) {
-      return { email: maybeEmail, name: maybeName };
-    }
-  }
-
-  return { email: value, name: "" };
 }
 
 export default function MailerSettingsPage() {
@@ -51,8 +29,6 @@ export default function MailerSettingsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [fromEmail, setFromEmail] = useState("");
-  const [fromName, setFromName] = useState("");
   const [trackOpens, setTrackOpens] = useState(true);
   const [trackClicks, setTrackClicks] = useState(true);
 
@@ -66,9 +42,6 @@ export default function MailerSettingsPage() {
         if (!res.ok) throw new Error(t("loadFailed"));
         const body = (await res.json()) as { data: MailerSettings };
         const data = body.data;
-        const parsedFrom = parseFromAddress(data.fromEmail || "");
-        setFromEmail(parsedFrom.email);
-        setFromName(data.fromName || parsedFrom.name || "");
         setTrackOpens(data.trackOpens ?? true);
         setTrackClicks(data.trackClicks ?? true);
       } catch (err) {
@@ -107,13 +80,10 @@ export default function MailerSettingsPage() {
     setSuccess("");
 
     try {
-      const normalizedFrom = parseFromAddress(fromEmail);
       const res = await apiFetch("/api/desktop/mailer-settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fromEmail: normalizedFrom.email || null,
-          fromName: (fromName || normalizedFrom.name || "").trim() || null,
           trackOpens,
           trackClicks,
         }),
@@ -153,35 +123,6 @@ export default function MailerSettingsPage() {
         </SectionCard>
       ) : (
         <form onSubmit={handleSave} className="space-y-6">
-          {/* Sender defaults */}
-          <SectionCard
-            title={t("groups.senderDefaults.title")}
-            description={t("groups.senderDefaults.description")}
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-1.5 text-sm">
-                <span className="font-medium text-foreground">
-                  {t("groups.senderDefaults.fromEmailLabel")}
-                </span>
-                <Input
-                  value={fromEmail}
-                  onChange={(e) => setFromEmail(e.target.value)}
-                  placeholder={t("groups.senderDefaults.fromEmailPlaceholder")}
-                />
-              </label>
-              <label className="grid gap-1.5 text-sm">
-                <span className="font-medium text-foreground">
-                  {t("groups.senderDefaults.fromNameLabel")}
-                </span>
-                <Input
-                  value={fromName}
-                  onChange={(e) => setFromName(e.target.value)}
-                  placeholder={t("groups.senderDefaults.fromNamePlaceholder")}
-                />
-              </label>
-            </div>
-          </SectionCard>
-
           {/* Tracking */}
           <SectionCard
             title={t("groups.tracking.title")}

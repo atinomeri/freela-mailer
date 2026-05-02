@@ -196,19 +196,11 @@
     },
     "settingsPage": {
       "title": "Settings",
-      "description": "Manage sender defaults and tracking.",
+      "description": "Manage tracking preferences.",
       "saveAction": "Save changes",
       "saveSuccess": "Settings saved.",
       "loading": "Loading...",
       "groups": {
-        "senderDefaults": {
-          "title": "Sender defaults",
-          "description": "Used when a sending account does not define its own sender details.",
-          "fromEmailLabel": "Default from email",
-          "fromEmailPlaceholder": "sender@company.com",
-          "fromNameLabel": "Default from name",
-          "fromNamePlaceholder": "Your team or brand name"
-        },
         "sendingAccounts": {
           "title": "Sending accounts",
           "description": "Connect an email service so your campaigns can be delivered.",
