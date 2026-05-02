@@ -434,9 +434,10 @@
         "placeholder": "Выберите аккаунт отправки",
         "noneOption": "Использовать ручной ввод ниже",
         "manageLink": "Управлять аккаунтами",
+        "addAnotherAction": "Добавить ещё один аккаунт",
         "noAccountsTitle": "Аккаунтов отправки пока нет",
         "noAccountsDescription": "Добавьте аккаунт отправки, чтобы кампании могли уходить.",
-        "addAccountAction": "Добавить аккаунт",
+        "addAccountAction": "Добавить аккаунт отправки",
         "unusableError": "У этого аккаунта нет пригодного email отправителя.",
         "providerLabel": "через {provider}"
       },

@@ -434,6 +434,7 @@
         "placeholder": "Select a sending account",
         "noneOption": "Use custom sender details below",
         "manageLink": "Manage sending accounts",
+        "addAnotherAction": "Add another sending account",
         "noAccountsTitle": "No sending accounts yet",
         "noAccountsDescription": "Add a sending account so we can deliver your campaigns.",
         "addAccountAction": "Add sending account",

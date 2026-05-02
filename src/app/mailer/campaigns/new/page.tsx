@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  Plus,
   Send,
   TriangleAlert,
   Users,
@@ -715,20 +716,12 @@ export default function NewCampaignPage() {
                 </Alert>
               ) : (
                 <div className="grid gap-1.5 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <label
-                      htmlFor="wizard-sender-account"
-                      className="font-medium text-foreground"
-                    >
-                      {tw("senderAccount.label")}
-                    </label>
-                    <Link
-                      href="/smtp-pool"
-                      className="text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      {tw("senderAccount.manageLink")}
-                    </Link>
-                  </div>
+                  <label
+                    htmlFor="wizard-sender-account"
+                    className="font-medium text-foreground"
+                  >
+                    {tw("senderAccount.label")}
+                  </label>
                   <select
                     id="wizard-sender-account"
                     value={selectedAccountId}
@@ -759,6 +752,22 @@ export default function NewCampaignPage() {
                       {tw("senderAccount.help")}
                     </p>
                   )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <ButtonLink
+                      href="/smtp-pool"
+                      variant="secondary"
+                      size="sm"
+                      leftIcon={<Plus className="h-3.5 w-3.5" />}
+                    >
+                      {tw("senderAccount.addAnotherAction")}
+                    </ButtonLink>
+                    <Link
+                      href="/smtp-pool"
+                      className="text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {tw("senderAccount.manageLink")}
+                    </Link>
+                  </div>
                   {selectedAccountUnusable && (
                     <Alert variant="destructive" className="mt-2">
                       {tw("senderAccount.unusableError")}

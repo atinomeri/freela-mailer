@@ -434,9 +434,10 @@
         "placeholder": "აირჩიე გაგზავნის ანგარიში",
         "noneOption": "ჩაწერე გამგზავნი ხელით",
         "manageLink": "ანგარიშების მართვა",
+        "addAnotherAction": "ახალი ანგარიშის დამატება",
         "noAccountsTitle": "გაგზავნის ანგარიში ჯერ არ არის",
         "noAccountsDescription": "დაამატე გაგზავნის ანგარიში, რომ შეგვეძლოს კამპანიების მიწოდება.",
-        "addAccountAction": "ანგარიშის დამატება",
+        "addAccountAction": "გაგზავნის ანგარიშის დამატება",
         "unusableError": "ამ გაგზავნის ანგარიშს არ აქვს გამოსადეგი ელფოსტა.",
         "providerLabel": "{provider}-ის გავლით"
       },
