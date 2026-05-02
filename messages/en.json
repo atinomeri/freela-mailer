@@ -213,6 +213,7 @@
       "description": "Understand campaign performance and export results.",
       "exportAction": "Export",
       "downloadFile": "Download file",
+      "downloadStarted": "Download started.",
       "preparingExport": "Preparing export...",
       "filtersTitle": "Filters",
       "campaignFilterLabel": "Campaign",

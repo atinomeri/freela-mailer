@@ -28,13 +28,14 @@ export async function GET(req: Request, { params }: RouteContext) {
 
     const file = await fs.readFile(job.filePath);
     const isXlsx = job.fileName.toLowerCase().endsWith(".xlsx");
+    const downloadName = isXlsx ? "freela-reports.xlsx" : "freela-reports.csv";
     return new Response(file, {
       status: 200,
       headers: {
         "Content-Type": isXlsx
           ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           : "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${job.fileName}"`,
+        "Content-Disposition": `attachment; filename="${downloadName}"`,
         "Cache-Control": "no-store",
       },
     });
@@ -43,4 +44,3 @@ export async function GET(req: Request, { params }: RouteContext) {
     return errors.serverError();
   }
 }
-

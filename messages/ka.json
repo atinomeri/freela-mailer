@@ -8,7 +8,7 @@
       "templates": "შაბლონები",
       "smtpPool": "გაგზავნის ანგარიშები",
       "settings": "პარამეტრები",
-      "reports": "ანგარიშები",
+      "reports": "ანგარიშგებები",
       "analytics": "ანალიტიკა",
       "billing": "ბილინგი",
       "admin": "ადმინი"
@@ -209,10 +209,11 @@
       "saveFailed": "პარამეტრების შენახვა ვერ მოხერხდა"
     },
     "reports": {
-      "title": "ანგარიშები",
+      "title": "ანგარიშგებები",
       "description": "გაიგე კამპანიის შედეგები და ექსპორტი გააკეთე.",
       "exportAction": "ექსპორტი",
       "downloadFile": "ფაილის ჩამოტვირთვა",
+      "downloadStarted": "ჩამოტვირთვა დაიწყო.",
       "preparingExport": "ექსპორტი მზადდება...",
       "filtersTitle": "ფილტრები",
       "campaignFilterLabel": "კამპანია",
@@ -236,7 +237,7 @@
       "exportFormatLabel": "ფორმატი",
       "exportSectionAll": "ყველა აქტივობა",
       "noActivityTitle": "აქტივობა ჯერ არ არის",
-      "noActivityDescription": "ანგარიშები გამოჩნდება კამპანიების გაგზავნის შემდეგ.",
+      "noActivityDescription": "ანგარიშგებები გამოჩნდება კამპანიების გაგზავნის შემდეგ.",
       "noResultsTitle": "ფილტრებს აქტივობა არ შეესაბამება",
       "noResultsDescription": "სცადე სხვა კამპანია ან თარიღების დიაპაზონი.",
       "columns": {
@@ -249,7 +250,7 @@
         "clickedAt": "დაკლიკების დრო",
         "link": "ბმული"
       },
-      "loadFailed": "ანგარიშების ჩატვირთვა ვერ მოხერხდა",
+      "loadFailed": "ანგარიშგებების ჩატვირთვა ვერ მოხერხდა",
       "exportFailed": "ექსპორტი ვერ მოხერხდა",
       "pageInfo": "გვერდი {page} / {pages}"
     },

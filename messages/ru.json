@@ -213,6 +213,7 @@
       "description": "Анализ кампаний и экспорт результатов.",
       "exportAction": "Экспорт",
       "downloadFile": "Скачать файл",
+      "downloadStarted": "Загрузка началась.",
       "preparingExport": "Готовим экспорт...",
       "filtersTitle": "Фильтры",
       "campaignFilterLabel": "Кампания",

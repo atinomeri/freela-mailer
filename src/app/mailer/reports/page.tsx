@@ -99,8 +99,17 @@ interface ExportJobStatusResponse {
   };
 }
 
+interface ApiErrorShape {
+  error?: string | { message?: string };
+  message?: string;
+}
+
 function formatNumber(value: number): string {
   return new Intl.NumberFormat().format(value);
+}
+
+function exportFileName(format: ExportFormat): string {
+  return `freela-reports.${format === "XLSX" ? "xlsx" : "csv"}`;
 }
 
 export default function MailerReportsPage() {
@@ -180,6 +189,32 @@ export default function MailerReportsPage() {
 
   if (!user) return <MailerLoginPage />;
 
+  function readApiError(body: ApiErrorShape | null, fallback: string): string {
+    const apiError = body?.error;
+    if (typeof apiError === "string") return apiError;
+    if (typeof apiError?.message === "string") return apiError.message;
+    if (typeof body?.message === "string") return body.message;
+    return fallback;
+  }
+
+  async function downloadExportFile(downloadUrl: string, format: ExportFormat) {
+    const res = await apiFetch(downloadUrl);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
+      throw new Error(readApiError(body, t("exportFailed")));
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = exportFileName(format);
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleExport() {
     setExporting(true);
     setError("");
@@ -197,31 +232,42 @@ export default function MailerReportsPage() {
           dateTo: dateToFilter || undefined,
         }),
       });
-      if (!res.ok) throw new Error(t("exportFailed"));
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
+        throw new Error(readApiError(body, t("exportFailed")));
+      }
       const body = (await res.json()) as ExportResponse;
       const data = body.data;
 
       if (data.mode === "direct" && data.downloadUrl) {
-        window.location.href = data.downloadUrl;
-        setExportInfo(t("downloadFile"));
+        await downloadExportFile(data.downloadUrl, exportFormat);
+        setExportInfo(t("downloadStarted"));
         setExportDownloadUrl(data.downloadUrl);
       } else {
         setExportInfo(t("preparingExport"));
         const poll = async () => {
-          const statusRes = await apiFetch(data.statusUrl);
-          if (!statusRes.ok) return;
-          const statusBody = (await statusRes.json()) as ExportJobStatusResponse;
-          const status = statusBody.data.status;
-          if (status === "COMPLETED" && statusBody.data.downloadUrl) {
-            setExportInfo(t("downloadFile"));
-            setExportDownloadUrl(statusBody.data.downloadUrl);
-            return;
+          try {
+            const statusRes = await apiFetch(data.statusUrl);
+            if (!statusRes.ok) {
+              const statusError = (await statusRes.json().catch(() => null)) as ApiErrorShape | null;
+              throw new Error(readApiError(statusError, t("exportFailed")));
+            }
+            const statusBody = (await statusRes.json()) as ExportJobStatusResponse;
+            const status = statusBody.data.status;
+            if (status === "COMPLETED" && statusBody.data.downloadUrl) {
+              await downloadExportFile(statusBody.data.downloadUrl, exportFormat);
+              setExportInfo(t("downloadStarted"));
+              setExportDownloadUrl(statusBody.data.downloadUrl);
+              return;
+            }
+            if (status === "FAILED") {
+              setError(statusBody.data.error || t("exportFailed"));
+              return;
+            }
+            setTimeout(() => void poll(), 2000);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : t("exportFailed"));
           }
-          if (status === "FAILED") {
-            setError(statusBody.data.error || t("exportFailed"));
-            return;
-          }
-          setTimeout(() => void poll(), 2000);
         };
         setTimeout(() => void poll(), 2000);
       }
@@ -323,7 +369,9 @@ export default function MailerReportsPage() {
                 variant="secondary"
                 size="sm"
                 onClick={() => {
-                  window.location.href = exportDownloadUrl;
+                  void downloadExportFile(exportDownloadUrl, exportFormat).catch((err) => {
+                    setError(err instanceof Error ? err.message : t("exportFailed"));
+                  });
                 }}
                 leftIcon={<Download className="h-3.5 w-3.5" />}
               >
