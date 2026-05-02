@@ -234,7 +234,8 @@ async function writeXlsx(rows: Array<Record<string, string | number>>, filePath:
   const workbook = XLSX.utils.book_new();
   const worksheet = XLSX.utils.json_to_sheet(rows);
   XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
-  XLSX.writeFile(workbook, filePath);
+  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  await fs.writeFile(filePath, buffer);
 }
 
 export async function runReportExportJob(jobId: string): Promise<void> {
@@ -289,6 +290,11 @@ export async function runReportExportJob(jobId: string): Promise<void> {
       },
     });
   } catch (err) {
+    console.error("[Reports Export Job] Failed:", {
+      jobId,
+      exportDir: EXPORT_DIR,
+      message: err instanceof Error ? err.message : String(err),
+    });
     await prisma.reportExportJob.update({
       where: { id: jobId },
       data: {
