@@ -64,6 +64,7 @@ const nextConfig = {
         { source: "/billing/:path*", destination: "/mailer/billing/:path*" },
         { source: "/campaigns/:path*", destination: "/mailer/campaigns/:path*" },
         { source: "/contacts/:path*", destination: "/mailer/contacts/:path*" },
+        { source: "/register/:path*", destination: "/mailer/register/:path*" },
         { source: "/reports/:path*", destination: "/mailer/reports/:path*" },
         { source: "/settings/:path*", destination: "/mailer/settings/:path*" },
         { source: "/smtp-pool/:path*", destination: "/mailer/smtp-pool/:path*" },

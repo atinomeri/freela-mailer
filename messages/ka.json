@@ -58,7 +58,23 @@
       "emailLabel": "ელფოსტა",
       "emailPlaceholder": "name@company.com",
       "passwordLabel": "პაროლი",
-      "passwordPlaceholder": "••••••••"
+      "passwordPlaceholder": "••••••••",
+      "noAccount": "ჯერ არ გაქვთ ანგარიში?",
+      "createAccount": "ანგარიშის შექმნა"
+    },
+    "signup": {
+      "title": "რეგისტრაცია",
+      "subtitle": "შექმენით ანგარიში და დაიწყეთ FREELA Mailer-ის გამოყენება.",
+      "nameLabel": "სახელი",
+      "namePlaceholder": "თქვენი სახელი",
+      "confirmPasswordLabel": "გაიმეორეთ პაროლი",
+      "createAccount": "ანგარიშის შექმნა",
+      "creating": "იქმნება...",
+      "haveAccount": "უკვე გაქვთ ანგარიში?",
+      "failed": "რეგისტრაცია ვერ მოხერხდა",
+      "emailExists": "ამ ელფოსტით ანგარიში უკვე არსებობს.",
+      "passwordTooShort": "პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო.",
+      "passwordMismatch": "პაროლები ერთმანეთს არ ემთხვევა."
     },
     "dashboard": {
       "title": "დეშბორდი",

@@ -5,6 +5,7 @@ import { signAccessToken, signRefreshToken, hashToken } from "@/lib/desktop-jwt"
 import {
   desktopRegisterIndividualSchema,
   desktopRegisterCompanySchema,
+  desktopPublicRegisterSchema,
 } from "@/lib/validation";
 import { errors } from "@/lib/api-response";
 import { checkRateLimit, getClientIpFromHeaders } from "@/lib/rate-limit";
@@ -15,28 +16,24 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
     if (!body) return errors.badRequest("Invalid JSON body");
 
-    // ── Validate by userType ────────────────────────────────────
-    const userType = body.userType;
-    if (!userType || !["individual", "company"].includes(userType)) {
-      return NextResponse.json(
-        { error: "Validation error", details: ["userType must be 'individual' or 'company'"] },
-        { status: 400 }
-      );
-    }
-
-    const schema =
+    // ── Validate payload ────────────────────────────────────────
+    // Public web signup sends a simple payload. The older desktop-style
+    // payload with userType remains supported for compatibility.
+    const userType = typeof body.userType === "string" ? body.userType : "public";
+    const parsed =
       userType === "individual"
-        ? desktopRegisterIndividualSchema
-        : desktopRegisterCompanySchema;
+        ? desktopRegisterIndividualSchema.safeParse(body)
+        : userType === "company"
+          ? desktopRegisterCompanySchema.safeParse(body)
+          : desktopPublicRegisterSchema.safeParse(body);
 
-    const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         {
           error: "Validation error",
           details: parsed.error.issues.map((i) => `${i.path.join(".")} ${i.message}`),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -82,7 +79,7 @@ export async function POST(req: Request) {
           { status: 409 }
         );
       }
-    } else {
+    } else if (userType === "company") {
       const d = data as typeof desktopRegisterCompanySchema._type;
       const existingCo = await prisma.desktopUser.findUnique({
         where: { companyIdCode: d.companyIdCode },
@@ -100,11 +97,12 @@ export async function POST(req: Request) {
     const passwordHash = await bcrypt.hash(data.password, 10);
 
     const createData: Parameters<typeof prisma.desktopUser.create>[0]["data"] = {
-      userType: userType === "individual" ? "INDIVIDUAL" : "COMPANY",
-      phone: data.phone,
+      userType: userType === "company" ? "COMPANY" : "INDIVIDUAL",
+      phone: "phone" in data ? data.phone : "",
       email: data.email,
       passwordHash,
       balance: 0,
+      isAdmin: false,
     };
 
     if (userType === "individual") {
@@ -115,13 +113,22 @@ export async function POST(req: Request) {
       createData.birthDate = new Date(d.birthDate);
     } else {
       const d = data as typeof desktopRegisterCompanySchema._type;
-      createData.companyName = d.companyName;
-      createData.companyIdCode = d.companyIdCode;
+      if (userType === "company") {
+        createData.companyName = d.companyName;
+        createData.companyIdCode = d.companyIdCode;
+      } else {
+        const publicData = data as typeof desktopPublicRegisterSchema._type;
+        const nameParts = publicData.name?.trim().split(/\s+/).filter(Boolean) ?? [];
+        if (nameParts.length > 0) {
+          createData.firstName = nameParts[0];
+          createData.lastName = nameParts.slice(1).join(" ") || null;
+        }
+      }
     }
 
     const user = await prisma.desktopUser.create({
       data: createData,
-      select: { id: true, email: true, balance: true },
+      select: { id: true, email: true, balance: true, isAdmin: true },
     });
 
     // ── Issue tokens ────────────────────────────────────────────
@@ -145,6 +152,7 @@ export async function POST(req: Request) {
           id: user.id,
           email: user.email,
           balance: user.balance,
+          isAdmin: user.isAdmin,
         },
       },
       { status: 201 }

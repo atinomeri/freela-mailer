@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 
 export function MailerLoginPage() {
   const { login } = useMailerAuth();
@@ -79,6 +80,13 @@ export function MailerLoginPage() {
               {pending ? t("actions.signingIn") : t("actions.signIn")}
             </Button>
           </form>
+
+          <div className="mt-5 border-t border-border/70 pt-4 text-center text-sm text-muted-foreground">
+            <span>{t("login.noAccount")}</span>{" "}
+            <Link href="/register" className="font-semibold text-primary hover:underline">
+              {t("login.createAccount")}
+            </Link>
+          </div>
         </Card>
       </div>
     </div>

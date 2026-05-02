@@ -58,7 +58,23 @@
       "emailLabel": "Email",
       "emailPlaceholder": "name@company.com",
       "passwordLabel": "Пароль",
-      "passwordPlaceholder": "••••••••"
+      "passwordPlaceholder": "••••••••",
+      "noAccount": "Нет аккаунта?",
+      "createAccount": "Создать аккаунт"
+    },
+    "signup": {
+      "title": "Регистрация",
+      "subtitle": "Создайте аккаунт и начните пользоваться FREELA Mailer.",
+      "nameLabel": "Имя",
+      "namePlaceholder": "Ваше имя",
+      "confirmPasswordLabel": "Повторите пароль",
+      "createAccount": "Создать аккаунт",
+      "creating": "Создаём...",
+      "haveAccount": "Уже есть аккаунт?",
+      "failed": "Не удалось зарегистрироваться",
+      "emailExists": "Аккаунт с этим email уже существует.",
+      "passwordTooShort": "Пароль должен быть не короче 8 символов.",
+      "passwordMismatch": "Пароли не совпадают."
     },
     "dashboard": {
       "title": "Дашборд",

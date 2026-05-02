@@ -28,6 +28,7 @@ interface AuthState {
 
 interface MailerAuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
+  register: (params: { name?: string; email: string; password: string }) => Promise<void>;
   logout: () => void;
   /** Authenticated fetch — attaches Bearer token, handles 401 refresh */
   apiFetch: (url: string, init?: RequestInit) => Promise<Response>;
@@ -36,6 +37,18 @@ interface MailerAuthContextType extends AuthState {
 interface ApiErrorShape {
   error?: string | { message?: string };
   message?: string;
+}
+
+async function readAuthError(res: Response, fallback: string) {
+  const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
+  const apiError = body?.error;
+  return typeof apiError === "string"
+    ? apiError
+    : typeof apiError?.message === "string"
+      ? apiError.message
+      : typeof body?.message === "string"
+        ? body.message
+        : fallback;
 }
 
 // ============================================
@@ -80,6 +93,27 @@ function saveToStorage(data: { token: string; refreshToken: string; user: Mailer
 
 function clearStorage() {
   localStorage.removeItem(STORAGE_KEY);
+}
+
+function normalizeAuthResponse(data: {
+  accessToken: string;
+  refreshToken: string;
+  user: { id: string; email: string; balance: number; isAdmin?: boolean };
+}) {
+  const user: MailerUser = {
+    id: data.user.id,
+    email: data.user.email,
+    balance: data.user.balance,
+    isAdmin: Boolean(data.user.isAdmin),
+  };
+
+  saveToStorage({
+    token: data.accessToken,
+    refreshToken: data.refreshToken,
+    user,
+  });
+
+  return user;
 }
 
 // ============================================
@@ -133,6 +167,15 @@ export function MailerAuthProvider({ children }: { children: ReactNode }) {
     setState({ user: null, token: null, loading: false });
   }, []);
 
+  const saveAuthResponse = useCallback((data: {
+    accessToken: string;
+    refreshToken: string;
+    user: { id: string; email: string; balance: number; isAdmin?: boolean };
+  }) => {
+    const user = normalizeAuthResponse(data);
+    setState({ user, token: data.accessToken, loading: false });
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch(withBasePath("/api/desktop/auth/login"), {
       method: "POST",
@@ -141,35 +184,27 @@ export function MailerAuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as ApiErrorShape | null;
-      const apiError = body?.error;
-      const message =
-        typeof apiError === "string"
-          ? apiError
-          : typeof apiError?.message === "string"
-            ? apiError.message
-            : typeof body?.message === "string"
-              ? body.message
-              : "Login failed";
-      throw new Error(message);
+      throw new Error(await readAuthError(res, "Login failed"));
     }
 
     const data = await res.json();
-    const user: MailerUser = {
-      id: data.user.id,
-      email: data.user.email,
-      balance: data.user.balance,
-      isAdmin: Boolean(data.user.isAdmin),
-    };
+    saveAuthResponse(data);
+  }, [saveAuthResponse]);
 
-    saveToStorage({
-      token: data.accessToken,
-      refreshToken: data.refreshToken,
-      user,
+  const register = useCallback(async (params: { name?: string; email: string; password: string }) => {
+    const res = await fetch(withBasePath("/api/desktop/auth/register"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
     });
 
-    setState({ user, token: data.accessToken, loading: false });
-  }, []);
+    if (!res.ok) {
+      throw new Error(await readAuthError(res, "Registration failed"));
+    }
+
+    const data = await res.json();
+    saveAuthResponse(data);
+  }, [saveAuthResponse]);
 
   const refreshAccessToken = useCallback(async (): Promise<string | null> => {
     const stored = loadFromStorage();
@@ -231,7 +266,7 @@ export function MailerAuthProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <MailerAuthContext.Provider value={{ ...state, login, logout, apiFetch }}>
+    <MailerAuthContext.Provider value={{ ...state, login, register, logout, apiFetch }}>
       {children}
     </MailerAuthContext.Provider>
   );

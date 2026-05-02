@@ -58,7 +58,23 @@
       "emailLabel": "Email",
       "emailPlaceholder": "name@company.com",
       "passwordLabel": "Password",
-      "passwordPlaceholder": "••••••••"
+      "passwordPlaceholder": "••••••••",
+      "noAccount": "Do not have an account?",
+      "createAccount": "Create account"
+    },
+    "signup": {
+      "title": "Create account",
+      "subtitle": "Create your account and start using FREELA Mailer.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Your name",
+      "confirmPasswordLabel": "Confirm password",
+      "createAccount": "Create account",
+      "creating": "Creating...",
+      "haveAccount": "Already have an account?",
+      "failed": "Registration failed",
+      "emailExists": "An account with this email already exists.",
+      "passwordTooShort": "Password must be at least 8 characters.",
+      "passwordMismatch": "Passwords do not match."
     },
     "dashboard": {
       "title": "Dashboard",
